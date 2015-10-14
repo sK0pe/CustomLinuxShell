@@ -15,6 +15,20 @@
 
 int execute_cmdtree(CMDTREE *t)
 {
+	if(t->type == N_COMMAND){
+		printf("N command has been found");
+		if(fork() == 0){	//	child process successfully formed
+			char *newargs[] = {"ls", "-l", NULL};
+			execv("/bin/ls", newargs);
+		}
+		else{
+			
+		}
+	}
+	else{
+		fprintf(stderr,"%s: invalid NODETYPE in execute_cmdtree()\n",argv0);
+	}
+
 	int  exitstatus;
 	if(t == NULL) {			// hmmmm, a that's problem
 		exitstatus	= EXIT_FAILURE;
