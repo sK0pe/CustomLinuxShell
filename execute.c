@@ -51,6 +51,7 @@ int mysh_time(CMDTREE *timedTree){
 	return timedStatus;
 }
 
+
 //  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
 //  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
 //  READ print_cmdtree0() IN globals.c TO SEE HOW TO TRAVERSE THE COMMAND-TREE
@@ -77,28 +78,26 @@ int execute_cmdtree(CMDTREE *t)
 					//fprintf(stderr, "Forking %s failed\n", *t->argv);
 					perror("fork");
 					exitstatus = EXIT_FAILURE;
+					break;
 				}
 				//  If fork succeeds
 				if(programID == 0){	//  child process successfully initiated
-					if(execvp(*t->argv, t->argv) < 0){	//  if execute fails
+					if(execvp(t->argv[0], t->argv) < 0){	//  if execute fails
 						//fprintf(stderr, "Execution of %s failed.\n", *t->argv);
 						perror("mysh");
-						exitstatus = EXIT_FAILURE;
 					}
+					exitstatus = EXIT_FAILURE;
 				}
 				else{	// parent process (mysh) waiting for child to end
 					while(wait(&childStatus) != programID);
 				}
 				break;
 			}
-
 			default :
 				fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-				exit(1);
+				exitstatus = EXIT_FAILURE;
 				break;
 		}
 	}
-	
-
   return exitstatus;
 }
