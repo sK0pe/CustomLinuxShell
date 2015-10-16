@@ -1,6 +1,7 @@
 #include "mysh.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 /*
    CITS2002 Project 2 2015
@@ -12,15 +13,42 @@
 // -------------------------------------------------------------------
 
 
-void mysh_cd(char **argv){
-	if(argv[0] == NULL){	//  If arg not present
+void mysh_cd(char **directory){
+	if(directory[0] == NULL){	//  If arg not present
 		chdir(HOME);
 	}
 	else{
-		if(chdir(argv[0]) != 0){
+		if(chdir(directory[0]) != 0){
 			perror("mysh_cd");
 		}
 	}
+}
+
+int mysh_time(CMDTREE *timedTree){
+	struct timeval start, stop;
+	int timedStatus;
+	//	Strip the time argument, 1 less arg count
+	timedTree->argc--;
+	//	argv[1] is now argv[0]
+	char **temp = &timedTree->argv[0];
+	timedTree->argv = &timedTree->argv[1];
+	if(timedTree->argv[0] != NULL){
+		gettimeofday(&start, NULL);
+		timedStatus = execute_cmdtree(timedTree);
+		gettimeofday(&stop, NULL);
+		//  Print time between start and stop in milliseconds, converted
+		//  from microseconds
+		fprintf(stderr, "%s completed in %fmsec\n", timedTree->argv[0],
+			(double)(stop.tv_usec - start.tv_usec)/1000 
+				+ (double)(stop.tv_sec - start.tv_sec)*1000);
+	}
+	else{
+		fprintf(stderr, "Timing error: No task to time.\n");
+		return EXIT_FAILURE;
+	}
+	timedTree->argc++;
+	timedTree->argv = &(*temp);
+	return timedStatus;
 }
 
 //  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
@@ -30,10 +58,13 @@ void mysh_cd(char **argv){
 int execute_cmdtree(CMDTREE *t)
 {
 	int exitstatus;
-	// If Trying to change directory
-	if(strcmp(t->argv[0], "cd")==0){
-		mysh_cd(&t->argv[1]);	//  argv[1] becomes argv[0] for mysh_cd
-	}
+	// If timing task
+	if(strcmp(t->argv[0], "time") == 0){
+		return mysh_time(t);	//  Pass memory address for 2nd argument
+	}// If changing directory
+	if(strcmp(t->argv[0], "cd") == 0){
+		mysh_cd(&t->argv[1]);	//  Pass memory address for 2nd argument
+	}	
 	else{
 		switch(t->type){
 			case N_COMMAND:{
