@@ -39,6 +39,15 @@ int main(int argc, char *argv[]){
 
 //  WE COULD DISPLAY THE PARSED COMMAND-TREE, HERE, BY CALLING:
 	    print_cmdtree(t);
+			//  Check if input requires to exit from mysh
+			if(strcmp(t->argv[0], "exit")==0){
+				//  If exit has no args, exitstatus represents last program return 
+				if(t->argv[1] != NULL){
+					//  Else interpret argument as numeric exit status 
+					exitstatus = atoi(argv[1]);
+				}
+				break;
+			}
 			exitstatus = execute_cmdtree(t); 
 	    free_cmdtree(t);
 		}
