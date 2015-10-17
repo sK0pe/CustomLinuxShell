@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
+#include <sys/param.h>
 
 /*
    CITS2002 Project 2 2015
@@ -12,13 +13,44 @@
 
 // -------------------------------------------------------------------
 
-
+/*
+ * 	mysh_cd
+ * 	input:
+ * 	pointer to array of character arrays
+ * 	returns void
+ * 	Attempts to change directory to the first
+ * 	argument of input array.
+ * 	Defaults to HOME directory.
+ * 	If no '/' found, tries CDPATH
+ *
+ */
 void mysh_cd(char **directory){
 	if(directory[0] == NULL){	//  If arg not present
-		chdir(HOME);
+		chdir(HOME);	//  Default cd to home directory
 	}
 	else{
-		if(chdir(directory[0]) != 0){
+		if(chdir(directory[0]) != 0){	// If CD fails
+			// If no forward slash in directory, consider CDPATH
+			if(strchr(directory[0], '/') == NULL){
+				char tempCDPATH[strlen(CDPATH)+1];
+				strcpy(tempCDPATH, CDPATH);
+				char tryPath[MAXPATHLEN];
+				char *token = strtok(tempCDPATH, ":");
+				//	Loop through possible paths from CDPATH
+				while(token != NULL){
+					strcpy(tryPath, token);
+					strcat(tryPath, "/");
+					strcat(tryPath, directory[0]);
+					strcat(tryPath, "/");
+					//	If directory found, exit
+					if(chdir(tryPath) == 0){
+						return;
+					}
+					//	clear path buffer
+					memset(tryPath, 0, sizeof tryPath);
+					token = strtok(NULL,":");
+				}
+			}
 			perror("mysh_cd");
 		}
 	}
