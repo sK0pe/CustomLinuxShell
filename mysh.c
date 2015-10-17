@@ -46,7 +46,8 @@ int main(int argc, char *argv[]){
 					//  Exit with arg, exit with numeric interpretation
 					exitstatus = atoi(argv[1]);					
 				}
-				break;	//  Exit with no args, exit with last exitstatus
+				//  Exit with no args, exit with last exitstatus
+				exit(exitstatus);
 			}
 			exitstatus = execute_cmdtree(t); 
 	    free_cmdtree(t);

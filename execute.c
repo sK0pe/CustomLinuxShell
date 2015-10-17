@@ -56,6 +56,15 @@ void mysh_cd(char **directory){
 	}
 }
 
+/*
+ * 	mysh_time
+ * 	input CMDTREE pointer
+ * 	Strips the first argument of the argv component of
+ * 	the input, adjusts values accordingly then times
+ * 	execution of the remaining CMDTREE (if present)
+ * 	Will not time exit command.
+ *
+ */
 int mysh_time(CMDTREE *timedTree){
 	if(strcmp(timedTree->argv[1],"exit") == 0 || timedTree->argv[1] == NULL){
 		fprintf(stderr, "Timing error: No task to time.\n");
