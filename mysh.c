@@ -2,8 +2,8 @@
 
 /*
    CITS2002 Project 2 2015
-   Name(s):             student-name1 (, student-name2)
-   Student number(s):   student-number-1 (, student-number-2)
+   Name:             Pradyumn Vij
+   Student number:   21469477
    Date:                date-of-submission
  */
 
@@ -38,9 +38,21 @@ int main(int argc, char *argv[]){
 		if(t != NULL) {
 
 //  WE COULD DISPLAY THE PARSED COMMAND-TREE, HERE, BY CALLING:
-	    print_cmdtree(t);
-			exitstatus = execute_cmdtree(t); 
-	    free_cmdtree(t);
+	    //print_cmdtree(t);
+			//  Check if need to exit mysh
+			if(strcmp(t->argv[0], "exit") == 0){ 
+				if(t->argc > 1){ 
+					//  Exit with arg, exit with numeric interpretation
+					exitstatus = atoi(argv[1]);					
+				}
+				//  Exit with no args, exit with last exitstatus
+				break;
+			}
+			//printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
+			exitstatus = execute_cmdtree(t);
+			//printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
+			
+			free_cmdtree(t);
 		}
 	}
 	if(interactive){
