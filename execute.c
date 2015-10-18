@@ -56,6 +56,15 @@ void mysh_cd(char **directory){
 	}
 }
 
+/*
+ *	mysh_time
+ *	
+ *	Times all tasks that are run after the argument
+ *	of time.
+ *	Changes the structure of CMDTREE to reflect the
+ *	removal of the first argument then reverts the changes.
+ *	
+ */
 int mysh_time(CMDTREE *timedTree){
 	if(strcmp(timedTree->argv[1],"exit") == 0 || timedTree->argv[1] == NULL){
 		fprintf(stderr, "Timing error: No task to time.\n");
@@ -89,9 +98,15 @@ int mysh_time(CMDTREE *timedTree){
 //  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
 //  READ print_cmdtree0() IN globals.c TO SEE HOW TO TRAVERSE THE COMMAND-TREE
 
-int execute_cmdtree(CMDTREE *t)
-{
+int execute_cmdtree(CMDTREE *t){
 	int exitstatus;
+	//	If CMDTREE is null return failure.
+	if(t == NULL){
+		return(EXIT_FAILURE);
+	}else{
+		exitstatus = EXIT_SUCCESS;
+	}
+
 	// If timing task
 	if(strcmp(t->argv[0], "time") == 0){
 		return mysh_time(t);	//  Pass memory address for 2nd argument
@@ -103,26 +118,53 @@ int execute_cmdtree(CMDTREE *t)
 		switch(t->type){
 			case N_COMMAND:{
 				int childStatus;  //  used by wait, to check on child process
-				pid_t programID;
-				
-				programID = fork();
+				pid_t waitID;	//  used by wait to check on child exit
+				// Fork program to try to make a child process
+				pid_t programID = fork();
 
-				if(programID < 0){
-					//fprintf(stderr, "Forking %s failed\n", *t->argv);
-					perror("fork");
-					exitstatus = EXIT_FAILURE;
-					break;
-				}
-				//  If fork succeeds
-				if(programID == 0){	//  child process successfully initiated
-					if(execvp(t->argv[0], t->argv) < 0){	//  if execute fails
-						fprintf(stderr, "Execution of %s failed.\n", *t->argv);
-						perror("mysh");
+				printf("after fork -\nthe pid is = %d\nparentpid = %d and exitstatus is %d\n", getpid(), getppid(), exitstatus);
+				if(programID == 0){
+					//  child process scope
+					//  try and replace child with program
+					if(execvp(t->argv[0], t->argv) == -1){
+
+						printf("exec fail -\nparent wait - \nthe pid is = %d\nparentpid = %d and exitstatus is %d\n", getpid(), getppid(), exitstatus);
+						//  if execute fails
+						perror(t->argv[0]);
+						exitstatus = EXIT_FAILURE;
+						printf("when exec fails exit status is %d\n", exitstatus);
+						printf("when exec fails pid is %d\n", getpid());
+						//  Exit the child process.
+						//exit(EXIT_FAILURE);
+						//return(EXIT_FAILURE);
 					}
 					exitstatus = EXIT_FAILURE;
+					printf("when exec has non negative output %d\n", exitstatus);
+					printf("when exitstatus has non negative output pid is %d\n", getpid());
+					exit(EXIT_FAILURE);
+					break;
 				}
-				else{	// parent process (mysh) waiting for child to end
-					while(wait(&childStatus) != programID);
+				else if(programID < 0){	// parent checks if fork() failed
+					//  Fork has failed
+					perror("fork");
+					exitstatus = EXIT_FAILURE;
+				}
+				else{	
+					// parent process scope 
+					//  waiting for child to end
+					do{
+						waitID = waitpid(programID, &childStatus, WUNTRACED);
+						if(waitID == -1){	//	Check if waitpid exited with error
+							perror("waitpid");
+							exit(EXIT_FAILURE);
+						}
+						if(WIFEXITED(childStatus)){	//	If child exited
+							//  Assign child exit status to output
+							exitstatus = WEXITSTATUS(childStatus);
+						}
+					}
+					//  Wait until child exits or is signalled to exit
+					while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
 				}
 				break;
 			}
@@ -134,165 +176,4 @@ int execute_cmdtree(CMDTREE *t)
 	}
   return exitstatus;
 }
-{
-	int exitstatus;	
-	int status;  //  used by wait, to check on child process
-	pid_t programID;
 
-	programID = fork();
-
-	if(programID < 0){
-		//fprintf(stderr, "Forking %s failed\n", *t->argv);
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-	//  If fork succeeds
-	if(programID == 0){	//  child process successfully initiated
-		if(execvp(*t->argv, t->argv) < 0){	//  if execute fails
-			//fprintf(stderr, "Execution of %s failed.\n", *t->argv);
-			perror("mysh");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else{	// parent process (mysh) waiting for child to end
-		while(wait(&status) != programID);
-	}
-	exitstatus = 1;
-	return exitstatus;
-}
-
-//Execute CMD tree by traversing the graph. 
-int execute_cmdtree(CMDTREE *t) {
-	int exitstatus;
-	CMDTREE* temp = NULL;
-
-	//Keep searching the tree for a command.  Exit loop by returning exitstatus.
-	while(1) {	
-		switch (t->type) {
-			case N_COMMAND :
-				exitstatus = execute_command(t);  //Iff only one command, execute command then return exitstatus.
-				return exitstatus;
-				break;
-			
-			case N_AND :
-				//Check tree node has valid left and right children
-				if(!t->left || !t->right) {
-					fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-					exit(1);
-					break;	
-				}	
-				//Execute left childs command, then record its exit status.  If no command, error in tree.
-				if(t->left->type == N_COMMAND) 
-					exitstatus = execute_command(t->left);
-
-
-				//If exitstatus of left child command is false, then right child is not executed.  If tree position
-				//to the left of N_SEMICOLON node go to right of N_SEMICOLON node, position stored by temp.  Otherwise
-				//tree traversal is finished, return with exitstatus.
-				if(!exitstatus) {
-					if(temp) { 
-						t=temp->right;
-						temp=NULL;
-					}
-					else return exitstatus;
-					continue;
-				}
-			
-				//If right child is a command, execute the command.  Then if left of ';' point to node right of ';'. 
-				//Otherwise, tree traversal is finished, return exitstatus.	
-				if(t->right->type == N_COMMAND ) {
-					exitstatus = execute_command(t->right);
-					if(temp) {
-						t=temp->right;
-						temp=NULL;
-					}
-					else return exitstatus;
-					continue;
-				}
-				
-					
-				else {	
-					if (t->right) t=t->right;
-					else return exitstatus;
-					continue;
-				}
-				break;
-			
-			
-			case N_OR :
-				//Check left right child nodes not NULL
-				if(!t->left || !t->right) {
-					fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-					exit(1);
-					break;	
-				}	
-				//Execute left node.  If left child node is not a command there is an error.
-				if(t->left->type == N_COMMAND) 
-					exitstatus = execute_command(t->left);
-				//If command is successful, do not execute right child node. If left of N_SEMMICOLON node
-				//move to the right.  Otherwise, last command on tree. Return exitvalue and exit tree.
-				if(exitstatus) {
-					if(temp) { 
-						t=temp->right;
-						temp=NULL;
-					}
-					else return exitstatus;
-					continue;
-				}
-				//Execute right child nodes command if it is a command.
-				if(t->right->type == N_COMMAND ) {
-					exitstatus = execute_command(t->right);
-					if(temp) {
-						t=temp->right;
-						temp=NULL;
-					}
-					else return exitstatus;
-					continue;
-				}	
-				//If right child node is not a command, move to that node.
-				else {	
-					if (t->right) t=t->right;
-					continue;
-				}			
-				break;
-			
-
-			case N_SEMICOLON :
-				//Check if left or right child nodes are NULL
-				if(!t->left || !t->right) {
-					fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-					exit(1);
-					break;
-				} 
-				//If left node is a command, execute command.
-				if(t->left->type == N_COMMAND) {
-					exitstatus = execute_command(t->left);	
-				}
-				//Otherwise, travel to that node.  Remember pointer to N_SEMICOLON node.  After executing
-				//left tree, temp can be used to remember right side of tree for execution.
-				else {
-					temp=t;
-					t=t->left;
-					continue;
-				}
-				//If right child node is a command, execute it.  Then return exitstatus, tree is finished.
-				if(t->right->type == N_COMMAND) {
-					exitstatus = execute_command(t->right);
-					return exitstatus;
-				}
-				//Otherwise, travel to right child node.
-				else {
-					temp=NULL;
-					t=t->right;
-					continue;
-				}	
-				break;
-			
-			default :
-				fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-				exit(1);
-				break;
-	  	}
-	}
-	return exitstatus;
-}

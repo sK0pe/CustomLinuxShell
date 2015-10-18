@@ -38,19 +38,23 @@ int main(int argc, char *argv[]){
 		if(t != NULL) {
 
 //  WE COULD DISPLAY THE PARSED COMMAND-TREE, HERE, BY CALLING:
-	    print_cmdtree(t);
+	    //print_cmdtree(t);
 			//  Check if need to exit mysh
-			if(strcmp(t->argv[0], "exit")==0){
-				//  If exit has no args, exitstatus represents last program return 
-				if(t->argv[1] != NULL){ 
+			if(strcmp(t->argv[0], "exit") == 0){ 
+				if(t->argc > 1){ 
 					//  Exit with arg, exit with numeric interpretation
+					printf("access to 2nd argument, exit status = %d\n", atoi(argv[1]));
 					exitstatus = atoi(argv[1]);					
 				}
 				//  Exit with no args, exit with last exitstatus
-				exit(exitstatus);
+				printf("I'm exiting here with an exit status of %d\n", exitstatus);
+				break;
 			}
-			exitstatus = execute_cmdtree(t); 
-	    free_cmdtree(t);
+			printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
+			exitstatus = execute_cmdtree(t);
+			printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
+			
+			free_cmdtree(t);
 		}
 	}
 	if(interactive){
