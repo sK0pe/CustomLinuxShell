@@ -2,8 +2,8 @@
 
 /*
    CITS2002 Project 2 2015
-   Name(s):             student-name1 (, student-name2)
-   Student number(s):   student-number-1 (, student-number-2)
+   Name:             Pradyumn Vij
+   Student number:   21469477
    Date:                date-of-submission
  */
 
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
   int exitstatus	= EXIT_SUCCESS;
 
 //  READ AND EXECUTE COMMANDS FROM stdin UNTIL IT IS CLOSED (with control-D)
-  while(!feof(stdin) && exitstatus != EXIT_FAILURE) {
+  while(!feof(stdin)) {
 		CMDTREE	*t = parse_cmdtree(stdin);
 		if(t != NULL) {
 
