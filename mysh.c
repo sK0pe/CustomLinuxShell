@@ -43,16 +43,14 @@ int main(int argc, char *argv[]){
 			if(strcmp(t->argv[0], "exit") == 0){ 
 				if(t->argc > 1){ 
 					//  Exit with arg, exit with numeric interpretation
-					printf("access to 2nd argument, exit status = %d\n", atoi(argv[1]));
 					exitstatus = atoi(argv[1]);					
 				}
 				//  Exit with no args, exit with last exitstatus
-				printf("I'm exiting here with an exit status of %d\n", exitstatus);
 				break;
 			}
-			printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
+			//printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
 			exitstatus = execute_cmdtree(t);
-			printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
+			//printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
 			
 			free_cmdtree(t);
 		}

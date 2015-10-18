@@ -122,27 +122,17 @@ int execute_cmdtree(CMDTREE *t){
 				// Fork program to try to make a child process
 				pid_t programID = fork();
 
-				printf("after fork -\nthe pid is = %d\nparentpid = %d and exitstatus is %d\n", getpid(), getppid(), exitstatus);
 				if(programID == 0){
 					//  child process scope
 					//  try and replace child with program
-					if(execvp(t->argv[0], t->argv) == -1){
-
-						printf("exec fail -\nparent wait - \nthe pid is = %d\nparentpid = %d and exitstatus is %d\n", getpid(), getppid(), exitstatus);
-						//  if execute fails
+					if(execvp(t->argv[0], t->argv) < 0){
+						//  if execute fails generate error
 						perror(t->argv[0]);
-						exitstatus = EXIT_FAILURE;
-						printf("when exec fails exit status is %d\n", exitstatus);
-						printf("when exec fails pid is %d\n", getpid());
-						//  Exit the child process.
-						//exit(EXIT_FAILURE);
-						//return(EXIT_FAILURE);
+						//  Exit the child as it couldn't be replaced with the
+						//  program from the CMDTREE
+						exit(EXIT_FAILURE);
 					}
-					exitstatus = EXIT_FAILURE;
-					printf("when exec has non negative output %d\n", exitstatus);
-					printf("when exitstatus has non negative output pid is %d\n", getpid());
-					exit(EXIT_FAILURE);
-					break;
+					//  exit(EXIT_FAILURE);
 				}
 				else if(programID < 0){	// parent checks if fork() failed
 					//  Fork has failed
