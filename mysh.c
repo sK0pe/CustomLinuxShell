@@ -48,9 +48,9 @@ int main(int argc, char *argv[]){
 				//  Exit with no args, exit with last exitstatus
 				break;
 			}
-			//printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
+			printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
 			exitstatus = execute_cmdtree(t);
-			//printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
+			printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
 			
 			free_cmdtree(t);
 		}
