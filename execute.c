@@ -3,6 +3,7 @@
 #include <sys/wait.h>
 
 int launch_command(CMDTREE *t){
+	print_cmdtree(t);
 	int launchStatus;
 	int childStatus;  // used by wait, to check on child process
 	pid_t waitID;	// used by wait to check on child exit
@@ -50,6 +51,7 @@ int launch_command(CMDTREE *t){
 //  READ print_cmdtree0() IN globals.c TO SEE HOW TO TRAVERSE THE COMMAND-TREE
 
 int execute_cmdtree(CMDTREE *t){
+	print_cmdtree(t);
 	int exitstatus;
 	//	If CMDTREE is null return failure.
 	if(t == NULL){
@@ -74,6 +76,7 @@ int execute_cmdtree(CMDTREE *t){
 			if(strcmp(t->argv[0], "time") == 0){
 				//  Pass memory address for 2nd argument
 				exitstatus = mysh_time(t);
+				break;
 			}
 			//  Change Directory
 			if(strcmp(t->argv[0], "cd") == 0){
@@ -87,6 +90,7 @@ int execute_cmdtree(CMDTREE *t){
 			break;
 		}
 		case N_SEMICOLON:{
+			print_cmdtree(t);
 			execute_cmdtree(t->left);
 			exitstatus = execute_cmdtree(t->right);
 			break;
