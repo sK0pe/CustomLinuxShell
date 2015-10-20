@@ -65,12 +65,7 @@ int execute_cmdtree(CMDTREE *t){
 			//  Check for builtin tasks
 			//  Exit task
 			if(strcmp(t->argv[0], "exit") == 0){
-				if(t->argc > 1){
-					exit(atoi(t->argv[1]));
-				}
-				else{
-					exit(getPriorExitStatus());
-				}
+				mysh_exit(t);
 			}
 			//  Timing task
 			if(strcmp(t->argv[0], "time") == 0){
