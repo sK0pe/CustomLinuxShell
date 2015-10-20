@@ -10,11 +10,28 @@
 //  Local protected C file global
 static int exitstatus;
 
+/*
+ *  getPriorExitStatus
+ *  
+ *  input: void
+ *  return: integer representing the current
+ *  value of static integer exitstatus.
+ *  Simple getter function for exit status.
+ *  Allows for exit from shell to be placed in 
+ *  a function outside of main.
+ */
 int getPriorExitStatus(){
 	return exitstatus;
 }
 
-
+/*
+ *  Main
+ *
+ *  Executes from OS call.
+ *  Initialises shell internal variables variables and
+ *  runs the main shell loop for receiving input from
+ *  user.  Parses, executes and frees input.
+ */
 int main(int argc, char *argv[]){
 	//  REMEMBER THE PROGRAM'S NAME (TO REPORT ANY LATER ERROR MESSAGES)
 	argv0	= (argv0 = strrchr(argv[0],'/')) ? argv0+1 : argv[0];

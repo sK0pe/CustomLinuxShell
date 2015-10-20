@@ -15,14 +15,16 @@ Date:		date-of-submission
 
 
 /*
-mysh_exit
-input: CMDTREE pointer
-returns: void
-Tasked with exiting the prior exit status if called with
-no arguments.
-Or if called with arguments, exits with the numeric value
-of the first argument after the call to exit
-*/
+ *  mysh_exit
+ *  
+ *  input: CMDTREE pointer
+ *  returns: void
+ *  Tasked with exiting the prior exit status if called with
+ *  no arguments.
+ *  Or if called with arguments, exits with the numeric value
+ *  of the first argument after the call to exit
+ */
+
 void mysh_exit(CMDTREE *t){
 	//  More than one argument:
 	if(t->argc > 1){
@@ -38,6 +40,7 @@ void mysh_exit(CMDTREE *t){
 
 /*
  * 	mysh_cd
+ *  
  * 	input: pointer to array of character arrays
  * 	returns: void
  * 	Attempts to change directory to the first
@@ -80,7 +83,9 @@ void mysh_cd(char **directory){
 
 /*
  *	mysh_time
- *	
+ *  
+ *	input: CMDTREE pointer
+ *	return: exit status of remainder of line
  *	Times all tasks that are run after the argument
  *	of time.
  *	Changes the structure of CMDTREE to reflect the

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <sys/wait.h>
 
 #if defined(__linux__)
     extern	char	*strdup(const char *str);
@@ -55,6 +56,8 @@ extern void mysh_cd(char **);	//  in builtins.c
 extern int mysh_time(CMDTREE *);	//  in builtins.c
 extern void mysh_exit(CMDTREE *); //  in builtins
 extern int getPriorExitStatus();  //  in mysh.c
+extern int launch_command(CMDTREE *);  //  in launchers.c
+extern int launch_background(CMDTREE *);  //  in launchers.c
 
 
 /* The global variable HOME points to a directory name stored as a
