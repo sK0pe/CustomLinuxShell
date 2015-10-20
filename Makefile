@@ -1,7 +1,7 @@
 #	Make file for mysh shell program
 PROJECT = mysh
 HEADERS = mysh.h
-OBJ = mysh.o globals.o execute.o parser.o builtins.o
+OBJ = mysh.o globals.o execute.o parser.o builtins.o launchers.o
 
 C99 = cc -std=c99
 CFLAGS = -Wall -pedantic -Werror
@@ -25,6 +25,8 @@ parser.o : parser.c $(HEADERS)
 builtins.o : builtins.c $(HEADERS)
 	$(C99) $(CFLAGS) -c builtins.c
 
+launchers.o : launchers.c $(HEADERS)
+	$(C99) $(CFLAGS) -c launchers.c
+
 clean:
 	rm -f $(PROJECT) $(OBJ)
-

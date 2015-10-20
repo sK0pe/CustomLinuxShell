@@ -1,55 +1,15 @@
 #include "mysh.h"
-#include <sys/types.h>
-#include <sys/wait.h>
 
-int launch_command(CMDTREE *t){
-	//print_cmdtree(t);
-	int launchStatus;
-	int childStatus;  // used by wait, to check on child process
-	pid_t waitID;	// used by wait to check on child exit
-	
-	// Fork program to try to make a child process
-	pid_t programID = fork();
-	if(programID < 0){	// parent checks if fork() failed
-		//  Fork has failed
-		perror("fork");
-		return EXIT_FAILURE;
-	}
-
-	if(programID == 0){
-		//  child process scope
-		//  try and replace child with program
-		execvp(t->argv[0], t->argv);
-		//  If child still exists after exec, execution failed
-		perror(t->argv[0]);
-		exit(EXIT_FAILURE);
-	}
-	else{	
-		//  parent process scope 
-		do{
-			//  Make parent wait for child to end
-			waitID = waitpid(programID, &childStatus, WUNTRACED);
-			//  Check if wait exited with error
-			if(waitID == -1){
-				perror("waitpid");
-				exit(EXIT_FAILURE);
-			}
-			//  Check if child exited
-			if(WIFEXITED(childStatus)){
-				//  Assign child exit status to output
-				launchStatus = WEXITSTATUS(childStatus);
-			}
-		}
-		//  Wait until child exits or is signalled to exit
-		while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
-	}
-	return launchStatus;
-}
-
-//  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
-//  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
-//  READ print_cmdtree0() IN globals.c TO SEE HOW TO TRAVERSE THE COMMAND-TREE
-
+/*
+ *  
+ *  execute_cmdtree
+ *  
+ *  input: CMDTREE pointer
+ *  return: exit status of an entire CMDTREE parsed from STDIN
+ *  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
+ *  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
+ *  
+ */
 int execute_cmdtree(CMDTREE *t){
 	//print_cmdtree(t);
 	int exitstatus;
@@ -110,6 +70,19 @@ int execute_cmdtree(CMDTREE *t){
 			if(exitstatus == EXIT_FAILURE){
 				exitstatus = execute_cmdtree(t->right);
 			}
+			break;
+		}
+		case N_BACKGROUND:{
+			//  integer reserved for background wait
+			int backgroundStatus;
+			//  Launch left branch in background
+			exitstatus = launch_background(t->left);
+			//  Launch right branch
+			execute_cmdtree(t->right);
+			//  Wait will pick up any finished background processes
+			//  Recursive nature allows for one wait for every
+			//  possible background process to avoid zombies.
+			wait(&backgroundStatus);
 			break;
 		}
 		default :
