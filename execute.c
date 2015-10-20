@@ -3,7 +3,7 @@
 #include <sys/wait.h>
 
 int launch_command(CMDTREE *t){
-	print_cmdtree(t);
+	//print_cmdtree(t);
 	int launchStatus;
 	int childStatus;  // used by wait, to check on child process
 	pid_t waitID;	// used by wait to check on child exit
@@ -51,7 +51,7 @@ int launch_command(CMDTREE *t){
 //  READ print_cmdtree0() IN globals.c TO SEE HOW TO TRAVERSE THE COMMAND-TREE
 
 int execute_cmdtree(CMDTREE *t){
-	print_cmdtree(t);
+	//print_cmdtree(t);
 	int exitstatus;
 	//	If CMDTREE is null return failure.
 	if(t == NULL){
@@ -85,11 +85,12 @@ int execute_cmdtree(CMDTREE *t){
 			break;
 		}
 		case N_SEMICOLON:{
-			print_cmdtree(t);
+			//print_cmdtree(t);
 			execute_cmdtree(t->left);
 			exitstatus = execute_cmdtree(t->right);
 			break;
-		} 
+		}
+
 		default :
 			fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
 			exitstatus = EXIT_FAILURE;
