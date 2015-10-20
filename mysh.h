@@ -53,6 +53,7 @@ extern void	free_cmdtree(CMDTREE *);	// in parser.c
 extern int	execute_cmdtree(CMDTREE *);	// in execute.c
 extern void mysh_cd(char **);	// in builtins.c
 extern int mysh_time(CMDTREE *);	// in builtins.c
+extern int getPriorExitStatus();  // in mysh.c
 
 
 /* The global variable HOME points to a directory name stored as a

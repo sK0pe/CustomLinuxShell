@@ -2,7 +2,48 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+int launch_command(CMDTREE *t){
+	int launchStatus;
+	int childStatus;  // used by wait, to check on child process
+	pid_t waitID;	// used by wait to check on child exit
+	
+	// Fork program to try to make a child process
+	pid_t programID = fork();
+	if(programID < 0){	// parent checks if fork() failed
+		//  Fork has failed
+		perror("fork");
+		return EXIT_FAILURE;
+	}
 
+	if(programID == 0){
+		//  child process scope
+		//  try and replace child with program
+		execvp(t->argv[0], t->argv);
+		//  If child still exists after exec, execution failed
+		perror(t->argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	else{	
+		//  parent process scope 
+		do{
+			//  Make parent wait for child to end
+			waitID = waitpid(programID, &childStatus, WUNTRACED);
+			//  Check if wait exited with error
+			if(waitID == -1){
+				perror("waitpid");
+				exit(EXIT_FAILURE);
+			}
+			//  Check if child exited
+			if(WIFEXITED(childStatus)){
+				//  Assign child exit status to output
+				launchStatus = WEXITSTATUS(childStatus);
+			}
+		}
+		//  Wait until child exits or is signalled to exit
+		while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
+	}
+	return launchStatus;
+}
 
 //  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
 //  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
@@ -16,68 +57,45 @@ int execute_cmdtree(CMDTREE *t){
 	}else{
 		exitstatus = EXIT_SUCCESS;
 	}
-
-	// If timing task
-	if(strcmp(t->argv[0], "time") == 0){
-		return mysh_time(t);	//  Pass memory address for 2nd argument
-	}// If changing directory
-	if(strcmp(t->argv[0], "cd") == 0){
-		mysh_cd(&t->argv[1]);	//  Pass memory address for 2nd argument
-	}
-	else{
-		switch(t->type){
-			case N_COMMAND:{
-				int childStatus;  //  used by wait, to check on child process
-				pid_t waitID;	//  used by wait to check on child exit
-				// Fork program to try to make a child process
-				pid_t programID = fork();
-				if(programID < 0){	// parent checks if fork() failed
-					//  Fork has failed
-					perror("fork");
-					exitstatus = EXIT_FAILURE;
+	//  Check type of Command Branch
+	switch(t->type){
+		case N_COMMAND:{
+			//  Check for builtin tasks
+			//  Exit task
+			if(strcmp(t->argv[0], "exit") == 0){
+				if(t->argc > 1){
+					exit(atoi(t->argv[1]));
 				}
-
-				if(programID == 0){
-					//  child process scope
-					//  try and replace child with program
-	//				if(execvp(t->argv[0], t->argv) < 0){
-						//  if execute fails generate error
-	//					perror(t->argv[0]);
-						//  Exit the child as it couldn't be replaced with the
-						//  program from the CMDTREE
-	//					exit(EXIT_FAILURE);
-	//				}
-					//  exit(EXIT_FAILURE);
-					execvp(t->argv[0], t->argv);
-					//	If child still exists after exec, it has failed
-					perror(t->argv[0]);
-					exit(EXIT_FAILURE);
+				else{
+					exit(getPriorExitStatus());
 				}
-				else{	
-					// parent process scope 
-					//  waiting for child to end
-					do{
-						waitID = waitpid(programID, &childStatus, WUNTRACED);
-						if(waitID == -1){	//	Check if waitpid exited with error
-							perror("waitpid");
-							exit(EXIT_FAILURE);
-						}
-						if(WIFEXITED(childStatus)){	//	If child exited
-							//  Assign child exit status to output
-							exitstatus = WEXITSTATUS(childStatus);
-						}
-					}
-					//  Wait until child exits or is signalled to exit
-					while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
-				}
+			}
+			//  Timing task
+			if(strcmp(t->argv[0], "time") == 0){
+				//  Pass memory address for 2nd argument
+				exitstatus = mysh_time(t);
+			}
+			//  Change Directory
+			if(strcmp(t->argv[0], "cd") == 0){
+				//  Pass memory address for 2nd argument
+				mysh_cd(&t->argv[1]);
 				break;
 			}
-			default :
-				fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
-				exitstatus = EXIT_FAILURE;
-				break;
+
+			//  Fork and execute external command(s)
+			exitstatus = launch_command(t);
+			break;
 		}
+		case N_SEMICOLON:{
+			execute_cmdtree(t->left);
+			exitstatus = execute_cmdtree(t->right);
+			break;
+		} 
+		default :
+			fprintf(stderr,"%s: invalid NODETYPE in print_cmdtree0()\n",argv0);
+			exitstatus = EXIT_FAILURE;
+			break;
 	}
-  return exitstatus;
+	return exitstatus;
 }
 
