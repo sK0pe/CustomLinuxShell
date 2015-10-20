@@ -47,9 +47,8 @@ int main(int argc, char *argv[]){
 
 			//  WE COULD DISPLAY THE PARSED COMMAND-TREE, HERE, BY CALLING:
 		    //print_cmdtree(t);
-			printf("exitstatus before execution of %s is = %d\n",t->argv[0], exitstatus);
 			exitstatus = execute_cmdtree(t);
-			printf("exit status after execution of %s is = %d\n", t->argv[0], exitstatus);
+			printf("\nexit status = %d\n", exitstatus);
 				
 			free_cmdtree(t);
 		}

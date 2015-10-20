@@ -15,10 +15,31 @@ Date:		date-of-submission
 
 
 /*
+mysh_exit
+input: CMDTREE pointer
+returns: void
+Tasked with exiting the prior exit status if called with
+no arguments.
+Or if called with arguments, exits with the numeric value
+of the first argument after the call to exit
+*/
+void mysh_exit(CMDTREE *t){
+	//  More than one argument:
+	if(t->argc > 1){
+		exit(atoi(t->argv[1]));
+	}
+	//  No arguments
+	else{
+		exit(getPriorExitStatus());
+	}
+}
+
+
+
+/*
  * 	mysh_cd
- * 	input:
- * 	pointer to array of character arrays
- * 	returns void
+ * 	input: pointer to array of character arrays
+ * 	returns: void
  * 	Attempts to change directory to the first
  * 	argument of input array.
  * 	Defaults to HOME directory.
