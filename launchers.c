@@ -8,6 +8,47 @@
 */
 
 /*
+ *  execute_command 
+ *  
+ *  input: character array pointer and array of character array pointer
+ *  return: void
+ *  
+ *  Helper function for child scope launchers functions, 
+ *  checks PATH if user enters a command not containing a '/'
+ *  Also calls perror and exits child if fails
+ */
+void execute_command(char *command, char **argv){
+	//  If command doesn't include a '/' consider PATH directories
+	if(strchr(command, '/') == NULL){
+		// Make copy of PATH as tokenizer is destructive
+		char tempPATH[strlen(PATH)+1];
+		strcpy(tempPATH, PATH);
+		char tryPath[MAXPATHLEN];
+		char *token = strtok(tempPATH, ":");
+		//	Loop through possible paths from PATH
+		while(token != NULL){
+			strcpy(tryPath, token);
+			strcat(tryPath, "/");
+			strcat(tryPath, command);
+			//	Attempt launch
+			execv(tryPath, argv);
+			//	clear path buffer
+			memset(tryPath, 0, sizeof tryPath);
+			//  Assign next possible buffer
+			token = strtok(NULL,":");
+		}
+	}
+	else{
+		// command includes a '/'
+		execv(command, argv);
+	}
+	perror(command);
+	exit(EXIT_FAILURE);
+}
+
+
+
+/*
  *  launch_command
  *  
  *  input: CMDTREE pointer
@@ -33,30 +74,24 @@ int launch_command(CMDTREE *t){
 
 	if(programID == 0){
 		//  child process scope
-		//  try and replace child with program
-		execvp(t->argv[0], t->argv);
-		//  If child still exists after exec, execution failed
-		perror(t->argv[0]);
-		exit(EXIT_FAILURE);
+		//  Try and replace child with program
+		//  If file execution fails exit child 
+		execute_command(t->argv[0], t->argv);
 	}
 	else{	
 		//  parent process scope 
-		do{
-			//  Make parent wait for child to end
-			waitID = waitpid(programID, &childStatus, WUNTRACED);
-			//  Check if wait exited with error
-			if(waitID == -1){
-				perror("waitpid");
-				exit(EXIT_FAILURE);
-			}
-			//  Check if child exited
-			if(WIFEXITED(childStatus)){
-				//  Assign child exit status to output
-				launchStatus = WEXITSTATUS(childStatus);
-			}
+		//  Make parent wait for specific child to end
+		waitID = waitpid(programID, &childStatus, WUNTRACED);
+		//  Check if wait exited with error
+		if(waitID == -1){
+			perror("waitpid");
+			exit(EXIT_FAILURE);
 		}
-		//  Wait until child exits or is signalled to exit
-		while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
+		//  Interpret child exit as success or failure
+		if(WIFEXITED(childStatus)){
+			//  Assign child exit stat to output
+			launchStatus = WEXITSTATUS(childStatus);
+		}
 	}
 	return launchStatus;
 }
@@ -83,10 +118,8 @@ int launch_background(CMDTREE *t){
 	if(programID == 0){
 		//  child process scope
 		//  try and replace child with program
-		execvp(t->argv[0], t->argv);
-		//  If child still exists after exec, execution failed
-		perror(t->argv[0]);
-		exit(EXIT_FAILURE);
+		//  If file execution fails exit child
+		execute_command(t->argv[0], t->argv);
 	}
 	//  Background process only fails on forking
 	return EXIT_SUCCESS;
@@ -119,17 +152,18 @@ int launch_subshell(CMDTREE *t){
 	}
 	else{
 		//  parent shell waiting for child exit
-		do{
-			//  Make parent wait for child shell to end
-			waitID = waitpid(programID, &childStatus, WUNTRACED);
-			//  Check if wait exited with error
-			if(waitID == -1){
-				perror("waitpid");
-				exit(EXIT_FAILURE);
-			}
+		//  Make parent wait for child shell to end
+		waitID = waitpid(programID, &childStatus, WUNTRACED);
+		//  Check if wait exited with error
+		if(waitID == -1){
+			perror("waitpid");
+			exit(EXIT_FAILURE);
 		}
-		//  Wait until child exits or is signalled to exit
-		while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
+		//  Interpret child shell exit as success or failure
+		if(WIFEXITED(childStatus)){
+			//  Assign child exit stat to output
+			shellStatus = WEXITSTATUS(childStatus);
+		}
 	}
 	//  Background process only fails on forking
 	return shellStatus;

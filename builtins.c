@@ -1,6 +1,5 @@
 #include "mysh.h"
 #include <sys/time.h>
-#include <sys/param.h>
 
 /*
 	CITS2002 Project 2 2015
