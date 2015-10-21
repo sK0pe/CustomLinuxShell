@@ -1,5 +1,11 @@
 #include "mysh.h"
 #include <sys/types.h>
+/*
+	CITS2002 Project 2 2015
+	Name(s):		Pradyumn Vij
+	Student number(s):	21469477
+	Date:		date-of-submission
+*/
 
 /*
  *  launch_command
@@ -82,6 +88,49 @@ int launch_background(CMDTREE *t){
 		perror(t->argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	//  Backgroung process only fails on forking
+	//  Background process only fails on forking
 	return EXIT_SUCCESS;
+}
+
+/*
+ *launch_subshell 
+ *
+ *input: CMDTREE Pointer
+ *return: Exit status of the function run in the subshell
+ *Creates a child shell from parent shell and runs commands
+ *within the child shell.
+ *Returns the exit status of the child shell commands.
+ */
+int launch_subshell(CMDTREE *t){
+	int shellStatus;
+	int childStatus;
+	pid_t waitID;
+	// Fork program to try to make a child process
+	pid_t programID = fork();
+	if(programID < 0){	// parent checks if fork() failed
+		//  Fork has failed
+		perror("fork");
+		return EXIT_FAILURE;
+	}
+
+	if(programID == 0){
+		//  child shell
+		shellStatus = execute_cmdtree(t);
+	}
+	else{
+		//  parent shell waiting for child exit
+		do{
+			//  Make parent wait for child shell to end
+			waitID = waitpid(programID, &childStatus, WUNTRACED);
+			//  Check if wait exited with error
+			if(waitID == -1){
+				perror("waitpid");
+				exit(EXIT_FAILURE);
+			}
+		}
+		//  Wait until child exits or is signalled to exit
+		while(!WIFEXITED(childStatus) && !WIFSIGNALED(childStatus));
+	}
+	//  Background process only fails on forking
+	return shellStatus;
 }
