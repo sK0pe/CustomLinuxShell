@@ -53,8 +53,21 @@ void execute_command(char *command, char **argv){
 	exit(EXIT_FAILURE);
 }
 
+/*
+ *  initialise_file_descriptors
+ *
+ *  input: CMDTREEE pointer
+ *  return: void 
+ *  
+ *  Helper function for launch_command and launch_background.
+ *  Checks if command tree requires files to be read or written to, 
+ *  if so initiates file descriptors and redirects to STDIN and
+ *  STDOUT
+ */
 void initialise_file_descriptors(CMDTREE *t){
+	//  Integers used by open()
 	int inDescriptor;
+	int outDescriptor;
 	//  Check if user wants to read input from file
 	if(t->infile != NULL){
 		//  Read input from file
@@ -74,8 +87,7 @@ void initialise_file_descriptors(CMDTREE *t){
 		//  Close file descriptor
 		close(inDescriptor);
 	}
-
-	int outDescriptor;
+	
 	//  Check if user wants output written to file
 	if(t->outfile != NULL){
 		//  Open into file descriptor, create if doesn't exist
@@ -99,7 +111,6 @@ void initialise_file_descriptors(CMDTREE *t){
 		//Close file descriptor
 		close(outDescriptor);
 	}
-
 }
 
 /*
@@ -108,10 +119,11 @@ void initialise_file_descriptors(CMDTREE *t){
  *  input: CMDTREE pointer
  *  return: exit status of an attempt at forking and executing
  *  a program.
- *  Funciton works as a single foreground launcher.
- *  Forks the parent then runs exec on the child and loops and
- *  waits for child specific exit, wait is broken by normal exit
- *  or if the child has been signalled to close.
+ *
+ *  Function works as a single foreground launcher.
+ *  Forks parent, runs exec on child or initiates subshell and
+ *  and launches remaining command tree.
+ *  Waits for child, specific to child exit.
  */
 int launch_command(CMDTREE *t){
 	int launchStatus;  // return status for the function
@@ -127,7 +139,7 @@ int launch_command(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  Child process scope
-		
+		//  Handle file descriptors if required
 		initialise_file_descriptors(t);
 
 		if(t->type == N_SUBSHELL){
@@ -137,7 +149,7 @@ int launch_command(CMDTREE *t){
 			launchStatus = execute_cmdtree(t->left);
 		}
 		else{
-			//  CMDTREE type is Command otherwise
+			//  CMDTREE type is N_COMMAND otherwise
 			//  Replace child with program or exit
 			execute_command(t->argv[0], t->argv);
 		}
@@ -180,6 +192,8 @@ int launch_background(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  child process scope
+		//  Handle file descriptors if required
+		initialise_file_descriptors(t);
 		//  Replace child with program or exit 
 		execute_command(t->argv[0], t->argv);
 	}
