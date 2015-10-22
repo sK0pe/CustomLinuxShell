@@ -85,7 +85,10 @@ void initialise_file_descriptors(CMDTREE *t){
 			exit(EXIT_FAILURE);
 		}
 		//  Close file descriptor
-		close(inDescriptor);
+		if(close(inDescriptor) < 0){
+			perror("close infile");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	//  Check if user wants output written to file
@@ -108,8 +111,11 @@ void initialise_file_descriptors(CMDTREE *t){
 			perror("dup2 outfile");
 			exit(EXIT_FAILURE);
 		}
-		//Close file descriptor
-		close(outDescriptor);
+		//  Close file descriptor
+		if(close(inDescriptor) < 0){
+			perror("close outfile");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
