@@ -1,11 +1,19 @@
 #include "mysh.h"
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 /*
 	CITS2002 Project 2 2015
 	Name(s):		Pradyumn Vij
 	Student number(s):	21469477
 	Date:		date-of-submission
 */
+
+// -------------------------------------------------------------------
+//	Functions used by execute.c to execute programs in the CMDTREE
+// -------------------------------------------------------------------
+
 
 /*
  *  execute_command 
@@ -24,18 +32,17 @@ void execute_command(char *command, char **argv){
 		char tempPATH[strlen(PATH)+1];
 		strcpy(tempPATH, PATH);
 		char tryPath[MAXPATHLEN];
-		char *token = strtok(tempPATH, ":");
+		char *possiblePath = strtok(tempPATH, ":");
 		//	Loop through possible paths from PATH
-		while(token != NULL){
-			strcpy(tryPath, token);
-			strcat(tryPath, "/");
-			strcat(tryPath, command);
+		while(possiblePath != NULL){
+			sprintf(tryPath,"%s/%s", possiblePath, command);
 			//	Attempt launch
+			//  If successful this program will no longer exist
 			execv(tryPath, argv);
 			//	clear path buffer
 			memset(tryPath, 0, sizeof tryPath);
 			//  Assign next possible buffer
-			token = strtok(NULL,":");
+			possiblePath = strtok(NULL,":");
 		}
 	}
 	else{
@@ -46,7 +53,54 @@ void execute_command(char *command, char **argv){
 	exit(EXIT_FAILURE);
 }
 
+void initialise_file_descriptors(CMDTREE *t){
+	int inDescriptor;
+	//  Check if user wants to read input from file
+	if(t->infile != NULL){
+		//  Read input from file
+		//  Open into read only descriptor
+		inDescriptor = open(t->infile, O_RDONLY);
+		if(inDescriptor < 0){
+			perror("Open Input file");
+			fprintf(stderr, "Program %s could not read file: %s\n", 
+				t->argv[0], t->infile);
+			exit(EXIT_FAILURE);
+		}
+		//  Replace STDIN with infile
+		if(dup2(inDescriptor,0) < 0){
+			perror("dup2 infile");
+			exit(EXIT_FAILURE);
+		}
+		//  Close file descriptor
+		close(inDescriptor);
+	}
 
+	int outDescriptor;
+	//  Check if user wants output written to file
+	if(t->outfile != NULL){
+		//  Open into file descriptor, create if doesn't exist
+		//  overwrite if does exist
+		//  Check if user wants to append
+		outDescriptor = t->append ? 
+		open(t->outfile, O_WRONLY | O_CREAT | O_APPEND) : 
+		open(t->outfile, O_WRONLY | O_CREAT | O_TRUNC);
+
+		if(outDescriptor == -1){
+			perror("Open Input file");
+			fprintf(stderr, "Program %s could not read file: %s\n", 
+				t->argv[0], t->infile);
+			exit(EXIT_FAILURE);
+		}
+		//  Replace STDOUT with outfile
+		if(dup2(outDescriptor,1) < 0){
+			perror("dup2 outfile");
+			exit(EXIT_FAILURE);
+		}
+		//Close file descriptor
+		close(outDescriptor);
+	}
+
+}
 
 /*
  *  launch_command
@@ -60,7 +114,7 @@ void execute_command(char *command, char **argv){
  *  or if the child has been signalled to close.
  */
 int launch_command(CMDTREE *t){
-	int launchStatus;
+	int launchStatus;  // return status for the function
 	int childStatus;  // used by wait, to check on child process
 	pid_t waitID;	// used by wait to check on child exit
 	
@@ -71,12 +125,22 @@ int launch_command(CMDTREE *t){
 		perror("fork");
 		return EXIT_FAILURE;
 	}
-
 	if(programID == 0){
-		//  child process scope
-		//  Try and replace child with program
-		//  If file execution fails exit child 
-		execute_command(t->argv[0], t->argv);
+		//  Child process scope
+		
+		initialise_file_descriptors(t);
+
+		if(t->type == N_SUBSHELL){
+			//  Fork a child shell and execute remaining
+			//  CMDTREE in child shell, launch status represents
+			//  child shell's exit status 
+			launchStatus = execute_cmdtree(t->left);
+		}
+		else{
+			//  CMDTREE type is Command otherwise
+			//  Replace child with program or exit
+			execute_command(t->argv[0], t->argv);
+		}
 	}
 	else{	
 		//  parent process scope 
@@ -114,57 +178,11 @@ int launch_background(CMDTREE *t){
 		perror("fork");
 		return EXIT_FAILURE;
 	}
-
 	if(programID == 0){
 		//  child process scope
-		//  try and replace child with program
-		//  If file execution fails exit child
+		//  Replace child with program or exit 
 		execute_command(t->argv[0], t->argv);
 	}
 	//  Background process only fails on forking
 	return EXIT_SUCCESS;
-}
-
-/*
- *launch_subshell 
- *
- *input: CMDTREE Pointer
- *return: Exit status of the function run in the subshell
- *Creates a child shell from parent shell and runs commands
- *within the child shell.
- *Returns the exit status of the child shell commands.
- */
-int launch_subshell(CMDTREE *t){
-	int shellStatus;
-	int childStatus;
-	pid_t waitID;
-	// Fork program to try to make a child process
-	pid_t programID = fork();
-	if(programID < 0){	// parent checks if fork() failed
-		//  Fork has failed
-		perror("fork");
-		return EXIT_FAILURE;
-	}
-
-	if(programID == 0){
-		//  child shell
-		shellStatus = execute_cmdtree(t);
-	}
-	else{
-		//  parent shell waiting for child exit
-		//  Make parent wait for child shell to end
-		waitID = waitpid(programID, &childStatus, WUNTRACED);
-		//  Check if wait exited with error
-		if(waitID == -1){
-			perror("waitpid");
-			exit(EXIT_FAILURE);
-		}
-		//  Interpret child shell exit as success or failure
-		if(WIFEXITED(childStatus)){
-			//  Assign child exit stat to output
-			shellStatus = WEXITSTATUS(childStatus);
-		}
-	}
-	//  Background process only fails on forking
-	return shellStatus;
 }

@@ -18,7 +18,6 @@
  *  
  */
 int execute_cmdtree(CMDTREE *t){
-	//print_cmdtree(t);
 	int exitstatus;
 	//	If CMDTREE is null return failure.
 	if(t == NULL){
@@ -46,7 +45,6 @@ int execute_cmdtree(CMDTREE *t){
 				exitstatus = mysh_cd(&t->argv[1]);
 				break;
 			}
-
 			//  Fork and execute external command(s)
 			exitstatus = launch_command(t);
 			break;
@@ -54,8 +52,7 @@ int execute_cmdtree(CMDTREE *t){
 		case N_SEMICOLON:{
 			//  Execute left branch
 			execute_cmdtree(t->left);
-			//  Execute right branch, whose exit status
-			//  represents a semicolon return.
+			//  Right branch represents exit status.
 			exitstatus = execute_cmdtree(t->right);
 			break;
 		}
@@ -89,8 +86,8 @@ int execute_cmdtree(CMDTREE *t){
 			break;
 		}
 		case N_SUBSHELL:{
-			//  Fork shell and launch left branch in child
-			exitstatus = launch_subshell(t->left);
+			//  Fork shell and execute remainining cmdtree in child shell;
+			exitstatus = launch_command(t);
 			break;
 		}
 		default :

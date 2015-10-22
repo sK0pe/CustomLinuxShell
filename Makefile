@@ -1,3 +1,8 @@
+# CITS2002 Project 2 2015
+# Name(s):		Pradyumn Vij
+# Student number(s):	21469477
+# Date:		date-of-submission
+
 #	Make file for mysh shell program
 PROJECT = mysh
 HEADERS = mysh.h

@@ -65,10 +65,7 @@ int mysh_cd(char **directory){
 				char *token = strtok(tempCDPATH, ":");
 				//	Loop through possible paths from CDPATH
 				while(token != NULL){
-					strcpy(tryPath, token);
-					strcat(tryPath, "/");
-					strcat(tryPath, directory[0]);
-					strcat(tryPath, "/");
+					sprintf(tryPath, "%s/%s/", token, directory[0]);
 					//	If directory found, exit
 					if(chdir(tryPath) == 0){
 						// Found path, exit successfully

@@ -49,7 +49,13 @@ typedef	struct ct {
     struct ct	*left, *right;	// pointers to left and right subtrees
 } CMDTREE;
 
-
+/*
+ *  Alterations: To available functions
+ *  CITS2002 Project 2 2015
+ *  Name(s):    Pradyumn Vij
+ *  Student number(s):  21469477
+ *  Date:   date-of-submission
+ */
 extern CMDTREE	*parse_cmdtree(FILE *);		//  in parser.c
 extern void	free_cmdtree(CMDTREE *);	//  in parser.c
 extern int	execute_cmdtree(CMDTREE *);	//  in execute.c
