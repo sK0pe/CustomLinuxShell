@@ -1,6 +1,13 @@
 #include "mysh.h"
 
 /*
+	CITS2002 Project 2 2015
+	Name(s):		Pradyumn Vij
+	Student number(s):	21469477
+	Date:		date-of-submission
+*/
+
+/*
  *  
  *  execute_cmdtree
  *  
@@ -11,7 +18,6 @@
  *  
  */
 int execute_cmdtree(CMDTREE *t){
-	//print_cmdtree(t);
 	int exitstatus;
 	//	If CMDTREE is null return failure.
 	if(t == NULL){
@@ -36,10 +42,9 @@ int execute_cmdtree(CMDTREE *t){
 			//  Change Directory
 			if(strcmp(t->argv[0], "cd") == 0){
 				//  Pass memory address for 2nd argument
-				mysh_cd(&t->argv[1]);
+				exitstatus = mysh_cd(&t->argv[1]);
 				break;
 			}
-
 			//  Fork and execute external command(s)
 			exitstatus = launch_command(t);
 			break;
@@ -47,8 +52,7 @@ int execute_cmdtree(CMDTREE *t){
 		case N_SEMICOLON:{
 			//  Execute left branch
 			execute_cmdtree(t->left);
-			//  Execute right branch, whose exit status
-			//  represents a semicolon return.
+			//  Right branch represents exit status.
 			exitstatus = execute_cmdtree(t->right);
 			break;
 		}
@@ -73,16 +77,17 @@ int execute_cmdtree(CMDTREE *t){
 			break;
 		}
 		case N_BACKGROUND:{
-			//  integer reserved for background wait
-			int backgroundStatus;
 			//  Launch left branch in background
 			exitstatus = launch_background(t->left);
 			//  Launch right branch
+			//  Do not wait for it, will continue to run till mysh
+			//  exits.  Then inherited by init.
 			execute_cmdtree(t->right);
-			//  Wait will pick up any finished background processes
-			//  Recursive nature allows for one wait for every
-			//  possible background process to avoid zombies.
-			wait(&backgroundStatus);
+			break;
+		}
+		case N_SUBSHELL:{
+			//  Fork shell and execute remainining cmdtree in child shell;
+			exitstatus = launch_command(t);
 			break;
 		}
 		default :

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/wait.h>
+#include <sys/param.h>
 
 #if defined(__linux__)
     extern	char	*strdup(const char *str);
@@ -48,16 +49,23 @@ typedef	struct ct {
     struct ct	*left, *right;	// pointers to left and right subtrees
 } CMDTREE;
 
-
+/*
+ *  Alterations: To available functions
+ *  CITS2002 Project 2 2015
+ *  Name(s):    Pradyumn Vij
+ *  Student number(s):  21469477
+ *  Date:   date-of-submission
+ */
 extern CMDTREE	*parse_cmdtree(FILE *);		//  in parser.c
 extern void	free_cmdtree(CMDTREE *);	//  in parser.c
 extern int	execute_cmdtree(CMDTREE *);	//  in execute.c
-extern void mysh_cd(char **);	//  in builtins.c
+extern int mysh_cd(char **);	//  in builtins.c
 extern int mysh_time(CMDTREE *);	//  in builtins.c
 extern void mysh_exit(CMDTREE *); //  in builtins
 extern int getPriorExitStatus();  //  in mysh.c
 extern int launch_command(CMDTREE *);  //  in launchers.c
 extern int launch_background(CMDTREE *);  //  in launchers.c
+extern int launch_subshell(CMDTREE *);  // in launchers.c
 
 
 /* The global variable HOME points to a directory name stored as a

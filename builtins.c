@@ -1,12 +1,11 @@
 #include "mysh.h"
 #include <sys/time.h>
-#include <sys/param.h>
 
 /*
-	 CITS2002 Project 2 2015
-	 Name(s):		Pradyumn Vij (, student-name2)
-	 Student number(s):	21469477 (, student-number-2)
-Date:		date-of-submission
+	CITS2002 Project 2 2015
+	Name(s):		Pradyumn Vij
+	Student number(s):	21469477
+	Date:		date-of-submission
 */
 
 // -------------------------------------------------------------------
@@ -42,19 +41,22 @@ void mysh_exit(CMDTREE *t){
  * 	mysh_cd
  *  
  * 	input: pointer to array of character arrays
- * 	returns: void
+ * 	returns: integer
  * 	Attempts to change directory to the first
  * 	argument of input array.
  * 	Defaults to HOME directory.
  * 	If no '/' found, tries CDPATH
- *
+ *  Returns if chage directory successful.
  */
-void mysh_cd(char **directory){
+int mysh_cd(char **directory){
+	int exitstatus;
 	if(directory[0] == NULL){	//  If arg not present
 		chdir(HOME);	//  Default cd to home directory
+		exitstatus = EXIT_SUCCESS;
 	}
 	else{
-		if(chdir(directory[0]) != 0){	// If CD fails
+		if(chdir(directory[0]) != 0){	
+			// If CD fails
 			// If no forward slash in directory, consider CDPATH
 			if(strchr(directory[0], '/') == NULL){
 				char tempCDPATH[strlen(CDPATH)+1];
@@ -63,13 +65,11 @@ void mysh_cd(char **directory){
 				char *token = strtok(tempCDPATH, ":");
 				//	Loop through possible paths from CDPATH
 				while(token != NULL){
-					strcpy(tryPath, token);
-					strcat(tryPath, "/");
-					strcat(tryPath, directory[0]);
-					strcat(tryPath, "/");
+					sprintf(tryPath, "%s/%s/", token, directory[0]);
 					//	If directory found, exit
 					if(chdir(tryPath) == 0){
-						return;
+						// Found path, exit successfully
+						return EXIT_SUCCESS;
 					}
 					//	clear path buffer
 					memset(tryPath, 0, sizeof tryPath);
@@ -77,8 +77,13 @@ void mysh_cd(char **directory){
 				}
 			}
 			perror("mysh_cd");
+			exitstatus = EXIT_FAILURE;
+		}
+		else{
+			exitstatus = EXIT_SUCCESS;
 		}
 	}
+	return exitstatus;
 }
 
 /*
@@ -119,4 +124,3 @@ int mysh_time(CMDTREE *timedTree){
 	timedTree->argv = &(*temp);
 	return timedStatus;
 }
-
