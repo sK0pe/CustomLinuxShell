@@ -206,32 +206,6 @@ int launch_command(CMDTREE *t){
 	return launchStatus;
 }
 
-
-void launch_subshell(CMDTREE *t, int *exitStatus){
-	int childStatus;
-	pid_t programID = fork();
-	if(programID < 0){
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-	if(programID == 0){
-		initialise_file_descriptors(t);
-		exit(execute_cmdtree(t->left));
-	}
-	else{
-		if(waitpid(programID, &childStatus,0) < 0){
-			perror("waitpid");
-			exit(EXIT_FAILURE);
-		}
-		//  If child exited, interpret exit
-		if(WIFEXITED(childStatus)){
-			//  Assign child exit status to output
-			*exitStatus = WEXITSTATUS(childStatus);
-		}
-	}
-}
-
-
 /*
  *  launch_background
  *  
