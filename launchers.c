@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 /*
 	CITS2002 Project 2 2015
@@ -25,7 +26,7 @@
  *  checks PATH if user enters a command not containing a '/'
  *  Also calls perror and exits child if fails
  */
-void execute_command(char *command, char **argv){
+static void execute_command(char *command, char **argv){
 	//  If command doesn't include a '/' consider PATH directories
 	if(strchr(command, '/') == NULL){
 		// Make copy of PATH as tokenizer is destructive
@@ -54,6 +55,22 @@ void execute_command(char *command, char **argv){
 }
 
 /*
+ *  safe_close
+ *  
+ *  input: character array pointer
+ *  return: void
+ *  
+ *  Helper function for calling close, closes file descriptors
+ *  with error checking.
+ */
+ void safe_close(char *program_message, int *file_descriptor){
+ 	if(close(*file_descriptor) < 0){
+ 		perror(program_message);
+ 		exit(EXIT_FAILURE);
+ 	}
+ }
+
+/*
  *  initialise_file_descriptors
  *
  *  input: CMDTREEE pointer
@@ -64,7 +81,7 @@ void execute_command(char *command, char **argv){
  *  if so initiates file descriptors and redirects to STDIN and
  *  STDOUT
  */
-void initialise_file_descriptors(CMDTREE *t){
+static void initialise_file_descriptors(CMDTREE *t){
 	//  Integers used by open()
 	int inDescriptor;
 	int outDescriptor;
@@ -85,10 +102,7 @@ void initialise_file_descriptors(CMDTREE *t){
 			exit(EXIT_FAILURE);
 		}
 		//  Close file descriptor
-		if(close(inDescriptor) < 0){
-			perror("close infile");
-			exit(EXIT_FAILURE);
-		}
+		safe_close("close infile", &inDescriptor);
 	}
 	
 	//  Check if user wants output written to file
@@ -100,7 +114,7 @@ void initialise_file_descriptors(CMDTREE *t){
 		open(t->outfile, O_WRONLY | O_CREAT | O_APPEND) : 
 		open(t->outfile, O_WRONLY | O_CREAT | O_TRUNC);
 
-		if(outDescriptor == -1){
+		if(outDescriptor < 0){
 			perror("Open Input file");
 			fprintf(stderr, "Program %s could not read file: %s\n", 
 				t->argv[0], t->infile);
@@ -112,12 +126,45 @@ void initialise_file_descriptors(CMDTREE *t){
 			exit(EXIT_FAILURE);
 		}
 		//  Close file descriptor
-		if(close(inDescriptor) < 0){
-			perror("close outfile");
-			exit(EXIT_FAILURE);
-		}
+		safe_close("close outfile", &outDescriptor);
 	}
 }
+
+/*
+ *  command_or_subshell
+ *  input: CMDTREE pointer
+ *  return: void 
+ *  
+ *  Helper function that executes a pointer appropriate to
+ *  N_SUBSHELL or N_COMMAND and also initialises I/O file
+ *  handles if required.  Expects to be launched within a
+ *  child scope.
+ */
+ static void command_or_subshell(CMDTREE *t){
+ 	//  Handle file descriptors if required
+	initialise_file_descriptors(t);
+	switch(t->type){
+		case N_SUBSHELL:{
+			//  Fork a child shell and execute remaining CMDTREE in child 
+			//   shell, exit with left branch exit status.
+			exit(execute_cmdtree(t->left));
+		}
+		case N_COMMAND:{
+			//  Replace child with program or exit
+			execute_command(t->argv[0], t->argv);
+		}
+		case N_PIPE:{
+			//  Launch pipe again till command or subshell found
+			launch_pipe(t);
+		}
+		default:{
+			fprintf(stderr,"%s: invalid NODETYPE in launchers\n",argv0);
+			exit(EXIT_FAILURE);
+			break;
+		}
+	}
+ }
+
 
 /*
  *  launch_command
@@ -134,8 +181,6 @@ void initialise_file_descriptors(CMDTREE *t){
 int launch_command(CMDTREE *t){
 	int launchStatus;  // return status for the function
 	int childStatus;  // used by wait, to check on child process
-	pid_t waitID;	// used by wait to check on child exit
-	
 	// Fork program to try to make a child process
 	pid_t programID = fork();
 	if(programID < 0){	// parent checks if fork() failed
@@ -146,26 +191,22 @@ int launch_command(CMDTREE *t){
 	if(programID == 0){
 		//  Child process scope
 		//  Handle file descriptors if required
-		initialise_file_descriptors(t);
-
-		if(t->type == N_SUBSHELL){
-			//  Fork a child shell and execute remaining
-			//  CMDTREE in child shell, launch status represents
-			//  child shell's exit status 
+		//initialise_file_descriptors(t);
+		//  Execute subshell or command
+		command_or_subshell(t);
+		//if(t->type == N_COMMAND){
+			//execute_command(t->argv[0], t->argv);
+		//}
+		/*else{
 			launchStatus = execute_cmdtree(t->left);
-		}
-		else{
-			//  CMDTREE type is N_COMMAND otherwise
-			//  Replace child with program or exit
-			execute_command(t->argv[0], t->argv);
-		}
+			printf("launchStatus = %d\n", launchStatus);
+			exit(launchStatus);
+		}*/
 	}
-	else{	
-		//  parent process scope 
+	else{
+		//  Parent process scope 
 		//  Make parent wait for specific child to end
-		waitID = waitpid(programID, &childStatus, WUNTRACED);
-		//  Check if wait exited with error
-		if(waitID == -1){
+		if(waitpid(programID, &childStatus, WUNTRACED) < 0){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
@@ -177,6 +218,32 @@ int launch_command(CMDTREE *t){
 	}
 	return launchStatus;
 }
+
+
+void launch_subshell(CMDTREE *t, int *exitStatus){
+	int childStatus;
+	pid_t programID = fork();
+	if(programID < 0){
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+	if(programID == 0){
+		initialise_file_descriptors(t);
+		exit(execute_cmdtree(t->left));
+	}
+	else{
+		if(waitpid(programID, &childStatus,0) < 0){
+			perror("waitpid");
+			exit(EXIT_FAILURE);
+		}
+		//  Interpret child exit as success or failure
+		if(WIFEXITED(childStatus)){
+			//  Assign child exit stat to output
+			*exitStatus = WEXITSTATUS(childStatus);
+		}
+	}
+}
+
 
 /*
  *  launch_background
@@ -198,11 +265,70 @@ int launch_background(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  child process scope
-		//  Handle file descriptors if required
-		initialise_file_descriptors(t);
-		//  Replace child with program or exit 
-		execute_command(t->argv[0], t->argv);
+		//  Execute subshell or command
+		command_or_subshell(t);
 	}
 	//  Background process only fails on forking
 	return EXIT_SUCCESS;
+}
+
+
+int launch_pipe(CMDTREE *t){
+	int pipeResult;
+	//int shellStatus1, shellStatus2;
+	int pipeStatus1, pipeStatus2;
+	pid_t program1, program2;
+	int pipeFD[2];  // required array for pipe
+	//  Create pipe
+	if(pipe(pipeFD) < 0){
+		perror("mysh: pipe");
+		return EXIT_FAILURE;
+	}
+	//  Fork Parent
+	if((program1 = fork()) == 0){
+		//  Child Scope (also has own pipe)
+		//  Replace child's STDOUT with pipe input
+		if(dup2(pipeFD[1], 1) < 0){
+			perror("dup2: Could not replace STDOUT with pipe in.");
+			exit(EXIT_FAILURE);
+		}
+		// Close pipe
+		safe_close("close: Could not replace STDOUT with pipe in.", &pipeFD[1]);
+		safe_close("close: Could not replace STDOUT with pipe in.", &pipeFD[0]);
+		//  Execute subshell or command on left branch
+		command_or_subshell(t->left);
+	}
+	//  Fork Parent again
+	else if((program2 = fork()) == 0){
+		//  Second Child's scope (also has own pipe)
+		//  Replace child's STDIN with pipe output
+		if(dup2(pipeFD[0], 0) < 0){
+			perror("dup2: Could not replace STDIN with pipe out.");
+			exit(EXIT_FAILURE);
+		}
+		// Close pipe
+		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[1]);
+		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[0]);
+		//  Execute subshell or command on right branch
+		command_or_subshell(t->right);
+	}
+	else{
+		//  Parent Scope
+		//  Close parent's pipe
+		safe_close("close: Pipe in not safely closed.", &pipeFD[1]);
+		safe_close("close: Pipe out not safely closed.", &pipeFD[0]);
+		//  Wait for children to return
+		if(waitpid(program1, &pipeStatus1, 0) < 0 || waitpid(program2, &pipeStatus2, 0) < 0){
+			perror("pipe waitpid");
+			exit(EXIT_FAILURE);
+		}
+		//  If either exitstatus is not successful
+		if(WIFEXITED(pipeStatus1) && WIFEXITED(pipeStatus2)){
+			if(!WEXITSTATUS(pipeStatus1) && !WEXITSTATUS(pipeStatus2)){
+				pipeResult = EXIT_SUCCESS;
+			}
+			else pipeResult = EXIT_FAILURE;
+		}
+	}
+	return pipeResult;
 }
