@@ -63,7 +63,7 @@ static void execute_command(char *command, char **argv){
  *  Helper function for calling close, closes file descriptors
  *  with error checking.
  */
- void safe_close(char *program_message, int *file_descriptor){
+ static void safe_close(char *program_message, int *file_descriptor){
  	if(close(*file_descriptor) < 0){
  		perror(program_message);
  		exit(EXIT_FAILURE);
@@ -132,12 +132,13 @@ static void initialise_file_descriptors(CMDTREE *t){
 
 /*
  *  command_or_subshell
+ *
  *  input: CMDTREE pointer
  *  return: void 
  *  
- *  Helper function that executes a pointer appropriate to
- *  N_SUBSHELL or N_COMMAND and also initialises I/O file
- *  handles if required.  Expects to be launched within a
+ *  Helper switch funciton for deciding between a subshell or
+ *  command launch.  Also initalises I/O file descriptors
+ *  if required.  Expects to be launched within a
  *  child scope.
  */
  static void command_or_subshell(CMDTREE *t){
@@ -148,14 +149,12 @@ static void initialise_file_descriptors(CMDTREE *t){
 			//  Fork a child shell and execute remaining CMDTREE in child 
 			//   shell, exit with left branch exit status.
 			exit(execute_cmdtree(t->left));
+			break;
 		}
 		case N_COMMAND:{
 			//  Replace child with program or exit
 			execute_command(t->argv[0], t->argv);
-		}
-		case N_PIPE:{
-			//  Launch pipe again till command or subshell found
-			launch_pipe(t);
+			break;
 		}
 		default:{
 			fprintf(stderr,"%s: invalid NODETYPE in launchers\n",argv0);
@@ -174,9 +173,7 @@ static void initialise_file_descriptors(CMDTREE *t){
  *  a program.
  *
  *  Function works as a single foreground launcher.
- *  Forks parent, runs exec on child or initiates subshell and
- *  and launches remaining command tree.
- *  Waits for child, specific to child exit.
+ *  Forks parent, runs exec on child or creates subshell and.
  */
 int launch_command(CMDTREE *t){
 	int launchStatus;  // return status for the function
@@ -190,18 +187,8 @@ int launch_command(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  Child process scope
-		//  Handle file descriptors if required
-		//initialise_file_descriptors(t);
 		//  Execute subshell or command
 		command_or_subshell(t);
-		//if(t->type == N_COMMAND){
-			//execute_command(t->argv[0], t->argv);
-		//}
-		/*else{
-			launchStatus = execute_cmdtree(t->left);
-			printf("launchStatus = %d\n", launchStatus);
-			exit(launchStatus);
-		}*/
 	}
 	else{
 		//  Parent process scope 
@@ -210,7 +197,7 @@ int launch_command(CMDTREE *t){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
-		//  Interpret child exit as success or failure
+		//  If child exited, interpret exit as success or failure
 		if(WIFEXITED(childStatus)){
 			//  Assign child exit stat to output
 			launchStatus = WEXITSTATUS(childStatus);
@@ -236,9 +223,9 @@ void launch_subshell(CMDTREE *t, int *exitStatus){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
-		//  Interpret child exit as success or failure
+		//  If child exited, interpret exit
 		if(WIFEXITED(childStatus)){
-			//  Assign child exit stat to output
+			//  Assign child exit status to output
 			*exitStatus = WEXITSTATUS(childStatus);
 		}
 	}
@@ -250,10 +237,11 @@ void launch_subshell(CMDTREE *t, int *exitStatus){
  *  
  *  input: CMDTREE pointer
  *  return: integer indicating whether fork successful or failed
+ *
  *  Variant of function "launch_command", however does not inlcude
  *  the parent waiting, only a child being forked and replaced
  *  with a program, allowing it to run in the background as a child
- *  of shell, returns to a wait in function "execute_cmdtree"
+ *  of shell.
 */
 int launch_background(CMDTREE *t){
 	// Fork program to try to make a child process
@@ -272,7 +260,16 @@ int launch_background(CMDTREE *t){
 	return EXIT_SUCCESS;
 }
 
-
+/*
+ *  launch_pipe
+ *
+ *  input: CMDTREE pointer
+ *  return: Integer representing success or failure
+ *
+ *  Opens a pipe in parent and forks 2 children.
+ *  First child's STDOUT is written to pipe input.
+ *  Second child's STDIN is received from pipe output
+ */
 int launch_pipe(CMDTREE *t){
 	int pipeResult;
 	//int shellStatus1, shellStatus2;
@@ -309,8 +306,13 @@ int launch_pipe(CMDTREE *t){
 		// Close pipe
 		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[1]);
 		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[0]);
-		//  Execute subshell or command on right branch
-		command_or_subshell(t->right);
+		//  Execute pipe, subshell or command on right branch
+		if(t->right-> type == N_PIPE){
+			//  Exit any pipe child so it doesn't return a value
+			exit(launch_pipe(t->right));
+		}else{
+			command_or_subshell(t->right);
+		}
 	}
 	else{
 		//  Parent Scope
@@ -322,8 +324,10 @@ int launch_pipe(CMDTREE *t){
 			perror("pipe waitpid");
 			exit(EXIT_FAILURE);
 		}
-		//  If either exitstatus is not successful
+		//  Determine exit statuses.
 		if(WIFEXITED(pipeStatus1) && WIFEXITED(pipeStatus2)){
+			//  Exit success when both sides of pipe exit success
+			//  ! EXIT_SUCCESS == boolean true
 			if(!WEXITSTATUS(pipeStatus1) && !WEXITSTATUS(pipeStatus2)){
 				pipeResult = EXIT_SUCCESS;
 			}
