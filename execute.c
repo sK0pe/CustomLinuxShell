@@ -87,7 +87,13 @@ int execute_cmdtree(CMDTREE *t){
 		}
 		case N_SUBSHELL:{
 			//  Fork shell and execute remainining cmdtree in child shell;
+			//launch_subshell(t, &exitstatus);
 			exitstatus = launch_command(t);
+			break;
+		}
+		case N_PIPE:{
+			//  Use STDOUT of left branch as STDIN for right branch
+			exitstatus = launch_pipe(t);
 			break;
 		}
 		default :

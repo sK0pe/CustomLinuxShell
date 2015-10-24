@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 /*
 	CITS2002 Project 2 2015
@@ -25,7 +26,7 @@
  *  checks PATH if user enters a command not containing a '/'
  *  Also calls perror and exits child if fails
  */
-void execute_command(char *command, char **argv){
+static void execute_command(char *command, char **argv){
 	//  If command doesn't include a '/' consider PATH directories
 	if(strchr(command, '/') == NULL){
 		// Make copy of PATH as tokenizer is destructive
@@ -54,6 +55,22 @@ void execute_command(char *command, char **argv){
 }
 
 /*
+ *  safe_close
+ *  
+ *  input: character array pointer
+ *  return: void
+ *  
+ *  Helper function for calling close, closes file descriptors
+ *  with error checking.
+ */
+ static void safe_close(char *program_message, int *file_descriptor){
+ 	if(close(*file_descriptor) < 0){
+ 		perror(program_message);
+ 		exit(EXIT_FAILURE);
+ 	}
+ }
+
+/*
  *  initialise_file_descriptors
  *
  *  input: CMDTREEE pointer
@@ -64,7 +81,7 @@ void execute_command(char *command, char **argv){
  *  if so initiates file descriptors and redirects to STDIN and
  *  STDOUT
  */
-void initialise_file_descriptors(CMDTREE *t){
+static void initialise_file_descriptors(CMDTREE *t){
 	//  Integers used by open()
 	int inDescriptor;
 	int outDescriptor;
@@ -85,10 +102,7 @@ void initialise_file_descriptors(CMDTREE *t){
 			exit(EXIT_FAILURE);
 		}
 		//  Close file descriptor
-		if(close(inDescriptor) < 0){
-			perror("close infile");
-			exit(EXIT_FAILURE);
-		}
+		safe_close("close infile", &inDescriptor);
 	}
 	
 	//  Check if user wants output written to file
@@ -100,7 +114,7 @@ void initialise_file_descriptors(CMDTREE *t){
 		open(t->outfile, O_WRONLY | O_CREAT | O_APPEND) : 
 		open(t->outfile, O_WRONLY | O_CREAT | O_TRUNC);
 
-		if(outDescriptor == -1){
+		if(outDescriptor < 0){
 			perror("Open Input file");
 			fprintf(stderr, "Program %s could not read file: %s\n", 
 				t->argv[0], t->infile);
@@ -112,12 +126,44 @@ void initialise_file_descriptors(CMDTREE *t){
 			exit(EXIT_FAILURE);
 		}
 		//  Close file descriptor
-		if(close(inDescriptor) < 0){
-			perror("close outfile");
-			exit(EXIT_FAILURE);
-		}
+		safe_close("close outfile", &outDescriptor);
 	}
 }
+
+/*
+ *  command_or_subshell
+ *
+ *  input: CMDTREE pointer
+ *  return: void 
+ *  
+ *  Helper switch funciton for deciding between a subshell or
+ *  command launch.  Also initalises I/O file descriptors
+ *  if required.  Expects to be launched within a
+ *  child scope.
+ */
+ static void command_or_subshell(CMDTREE *t){
+ 	//  Handle file descriptors if required
+	initialise_file_descriptors(t);
+	switch(t->type){
+		case N_SUBSHELL:{
+			//  Fork a child shell and execute remaining CMDTREE in child 
+			//   shell, exit with left branch exit status.
+			exit(execute_cmdtree(t->left));
+			break;
+		}
+		case N_COMMAND:{
+			//  Replace child with program or exit
+			execute_command(t->argv[0], t->argv);
+			break;
+		}
+		default:{
+			fprintf(stderr,"%s: invalid NODETYPE in launchers\n",argv0);
+			exit(EXIT_FAILURE);
+			break;
+		}
+	}
+ }
+
 
 /*
  *  launch_command
@@ -127,15 +173,11 @@ void initialise_file_descriptors(CMDTREE *t){
  *  a program.
  *
  *  Function works as a single foreground launcher.
- *  Forks parent, runs exec on child or initiates subshell and
- *  and launches remaining command tree.
- *  Waits for child, specific to child exit.
+ *  Forks parent, runs exec on child or creates subshell and.
  */
 int launch_command(CMDTREE *t){
 	int launchStatus;  // return status for the function
 	int childStatus;  // used by wait, to check on child process
-	pid_t waitID;	// used by wait to check on child exit
-	
 	// Fork program to try to make a child process
 	pid_t programID = fork();
 	if(programID < 0){	// parent checks if fork() failed
@@ -145,31 +187,17 @@ int launch_command(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  Child process scope
-		//  Handle file descriptors if required
-		initialise_file_descriptors(t);
-
-		if(t->type == N_SUBSHELL){
-			//  Fork a child shell and execute remaining
-			//  CMDTREE in child shell, launch status represents
-			//  child shell's exit status 
-			launchStatus = execute_cmdtree(t->left);
-		}
-		else{
-			//  CMDTREE type is N_COMMAND otherwise
-			//  Replace child with program or exit
-			execute_command(t->argv[0], t->argv);
-		}
+		//  Execute subshell or command
+		command_or_subshell(t);
 	}
-	else{	
-		//  parent process scope 
+	else{
+		//  Parent process scope 
 		//  Make parent wait for specific child to end
-		waitID = waitpid(programID, &childStatus, WUNTRACED);
-		//  Check if wait exited with error
-		if(waitID == -1){
+		if(waitpid(programID, &childStatus, WUNTRACED) < 0){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
-		//  Interpret child exit as success or failure
+		//  If child exited, interpret exit as success or failure
 		if(WIFEXITED(childStatus)){
 			//  Assign child exit stat to output
 			launchStatus = WEXITSTATUS(childStatus);
@@ -183,10 +211,11 @@ int launch_command(CMDTREE *t){
  *  
  *  input: CMDTREE pointer
  *  return: integer indicating whether fork successful or failed
+ *
  *  Variant of function "launch_command", however does not inlcude
  *  the parent waiting, only a child being forked and replaced
  *  with a program, allowing it to run in the background as a child
- *  of shell, returns to a wait in function "execute_cmdtree"
+ *  of shell.
 */
 int launch_background(CMDTREE *t){
 	// Fork program to try to make a child process
@@ -198,11 +227,86 @@ int launch_background(CMDTREE *t){
 	}
 	if(programID == 0){
 		//  child process scope
-		//  Handle file descriptors if required
-		initialise_file_descriptors(t);
-		//  Replace child with program or exit 
-		execute_command(t->argv[0], t->argv);
+		//  Execute subshell or command
+		command_or_subshell(t);
 	}
 	//  Background process only fails on forking
 	return EXIT_SUCCESS;
+}
+
+/*
+ *  launch_pipe
+ *
+ *  input: CMDTREE pointer
+ *  return: Integer representing success or failure
+ *
+ *  Opens a pipe in parent and forks 2 children.
+ *  First child's STDOUT is written to pipe input.
+ *  Second child's STDIN is received from pipe output
+ */
+int launch_pipe(CMDTREE *t){
+	int pipeResult;
+	//int shellStatus1, shellStatus2;
+	int pipeStatus1, pipeStatus2;
+	pid_t program1, program2;
+	int pipeFD[2];  // required array for pipe
+	//  Create pipe
+	if(pipe(pipeFD) < 0){
+		perror("mysh: pipe");
+		return EXIT_FAILURE;
+	}
+	//  Fork Parent
+	if((program1 = fork()) == 0){
+		//  Child Scope (also has own pipe)
+		//  Replace child's STDOUT with pipe input
+		if(dup2(pipeFD[1], 1) < 0){
+			perror("dup2: Could not replace STDOUT with pipe in.");
+			exit(EXIT_FAILURE);
+		}
+		// Close pipe
+		safe_close("close: Could not replace STDOUT with pipe in.", &pipeFD[1]);
+		safe_close("close: Could not replace STDOUT with pipe in.", &pipeFD[0]);
+		//  Execute subshell or command on left branch
+		command_or_subshell(t->left);
+	}
+	//  Fork Parent again
+	else if((program2 = fork()) == 0){
+		//  Second Child's scope (also has own pipe)
+		//  Replace child's STDIN with pipe output
+		if(dup2(pipeFD[0], 0) < 0){
+			perror("dup2: Could not replace STDIN with pipe out.");
+			exit(EXIT_FAILURE);
+		}
+		// Close pipe
+		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[1]);
+		safe_close("close: Could not replace STDIN with pipe out.", &pipeFD[0]);
+		//  Execute pipe, subshell or command on right branch
+		if(t->right-> type == N_PIPE){
+			//  Exit any pipe child so it doesn't return a value
+			exit(launch_pipe(t->right));
+		}else{
+			command_or_subshell(t->right);
+		}
+	}
+	else{
+		//  Parent Scope
+		//  Close parent's pipe
+		safe_close("close: Pipe in not safely closed.", &pipeFD[1]);
+		safe_close("close: Pipe out not safely closed.", &pipeFD[0]);
+		//  Wait for children to return
+		if(waitpid(program1, &pipeStatus1, 0) < 0 || waitpid(program2, &pipeStatus2, 0) < 0){
+			perror("pipe waitpid");
+			exit(EXIT_FAILURE);
+		}
+		//  Determine exit statuses.
+		if(WIFEXITED(pipeStatus1) && WIFEXITED(pipeStatus2)){
+			//  Exit success when both sides of pipe exit success
+			//  ! EXIT_SUCCESS == boolean true
+			if(!WEXITSTATUS(pipeStatus1) && !WEXITSTATUS(pipeStatus2)){
+				pipeResult = EXIT_SUCCESS;
+			}
+			else pipeResult = EXIT_FAILURE;
+		}
+	}
+	return pipeResult;
 }
