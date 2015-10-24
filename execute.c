@@ -45,6 +45,12 @@ int execute_cmdtree(CMDTREE *t){
 				exitstatus = mysh_cd(&t->argv[1]);
 				break;
 			}
+			//  Change Directory
+			if(strcmp(t->argv[0], "set") == 0){
+				//  Pass arg count-1 and memory address for 2nd argument
+				exitstatus = mysh_set(--t->argc, &t->argv[1]);
+				break;
+			}
 			//  Fork and execute external command(s)
 			exitstatus = launch_command(t);
 			break;

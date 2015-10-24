@@ -1,8 +1,7 @@
 #include "mysh.h"
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <signal.h>
+#include <sys/fcntl.h>
 
 /*
 	CITS2002 Project 2 2015

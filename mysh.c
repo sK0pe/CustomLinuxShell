@@ -7,7 +7,7 @@
    Date:                date-of-submission
  */
 
-//  Local protected C file global
+//  Local file global, protected
 static int exitstatus;
 
 /*
@@ -55,15 +55,13 @@ int main(int argc, char *argv[]){
 	//  DETERMINE IF THIS SHELL IS INTERACTIVE
 	interactive		= (isatty(fileno(stdin)) && isatty(fileno(stdout)));
 
-	//int exitstatus	= EXIT_SUCCESS;
+	exitstatus = EXIT_SUCCESS;
 
 	//  READ AND EXECUTE COMMANDS FROM stdin UNTIL IT IS CLOSED (with control-D)
 	while(!feof(stdin)) {
 		CMDTREE	*t = parse_cmdtree(stdin);
 		if(t != NULL) {
 
-			//  WE COULD DISPLAY THE PARSED COMMAND-TREE, HERE, BY CALLING:
-		    //print_cmdtree(t);
 			exitstatus = execute_cmdtree(t);
 			printf("\nexit status = %d\n", exitstatus);
 				
