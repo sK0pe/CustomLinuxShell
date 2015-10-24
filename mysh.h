@@ -61,12 +61,12 @@ extern void	free_cmdtree(CMDTREE *);	//  in parser.c
 extern int	execute_cmdtree(CMDTREE *);	//  in execute.c
 extern int mysh_cd(char **);	//  in builtins.c
 extern int mysh_time(CMDTREE *);	//  in builtins.c
-extern void mysh_exit(CMDTREE *); //  in builtins
+extern void mysh_exit(CMDTREE *); //  in builtins.c
+extern int mysh_set(int, char **);  // in builtins.c
 extern int getPriorExitStatus();  //  in mysh.c
 extern int launch_command(CMDTREE *);  //  in launchers.c
 extern int launch_background(CMDTREE *);  //  in launchers.c
 extern int launch_pipe(CMDTREE *);  // in launchers.c
-extern void launch_subshell(CMDTREE *, int *);  // in launchers.c
 
 /* The global variable HOME points to a directory name stored as a
    character string. This directory name is used to indicate two things:
