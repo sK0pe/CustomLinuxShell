@@ -16,44 +16,6 @@
 
 
 /*
- *  execute_command 
- *  
- *  input: character array pointer and array of character array pointer
- *  return: void
- *  
- *  Helper function for child scope launchers functions, 
- *  checks PATH if user enters a command not containing a '/'
- *  Also calls perror and exits child if fails
- */
-static void execute_command(char *command, char **argv){
-	//  If command doesn't include a '/' consider PATH directories
-	if(strchr(command, '/') == NULL){
-		// Make copy of PATH as tokenizer is destructive
-		char tempPATH[strlen(PATH)+1];
-		strcpy(tempPATH, PATH);
-		char tryPath[MAXPATHLEN];
-		char *possiblePath = strtok(tempPATH, ":");
-		//	Loop through possible paths from PATH
-		while(possiblePath != NULL){
-			sprintf(tryPath,"%s/%s", possiblePath, command);
-			//	Attempt launch
-			//  If successful this program will no longer exist
-			execv(tryPath, argv);
-			//	clear path buffer
-			memset(tryPath, 0, sizeof tryPath);
-			//  Assign next possible buffer
-			possiblePath = strtok(NULL,":");
-		}
-	}
-	else{
-		// command includes a '/'
-		execv(command, argv);
-	}
-	perror(command);
-	exit(EXIT_FAILURE);
-}
-
-/*
  *  safe_close
  *  
  *  input: character array pointer
@@ -130,6 +92,98 @@ static void initialise_file_descriptors(CMDTREE *t){
 }
 
 /*
+ *  execute_script
+ *
+ *  input: character pointer
+ *  return: integer
+ * 
+ *  Opens character pointer as a path to a script,
+ *  runs commands within script
+ *
+ */
+static int execute_script(char *scriptPath){
+	FILE *script = fopen(scriptPath,"r");
+	// Open file stream, assume text file
+	if(script == NULL){
+		//  Can't generate errors when user could be looking to
+		//  open an executable rather than a script file.
+		return EXIT_FAILURE;
+	}
+	int scriptStatus = EXIT_SUCCESS;
+	//  Loop through file stream
+	while(!feof(script)){
+		CMDTREE *s = parse_cmdtree(script);
+		scriptStatus = execute_cmdtree(s);
+		free_cmdtree(s);
+		printf("script exitstatus = %d\n", scriptStatus);
+	}
+	//  Close file stream
+	if(script != NULL){
+		fclose(script);
+	}
+	printf("scriptstatus before return = %d\n", scriptStatus);
+	return scriptStatus;
+}
+
+
+/*
+ *  execute_command 
+ *  
+ *  input: 
+ *  character array pointer
+ *  array of character array pointer
+ *  boolean value
+ *  return: void
+ *  
+ *  Helper function for child scope launchers functions, 
+ *  checks PATH if user enters a command not containing a '/'
+ *  Handles errors.
+ *  Boolean value determines whether to run script or executable
+ *  behaviour.
+ *  Script must exit child shell.
+ */
+static void execute_command(char *command, char **argv, bool script){
+	//  If command doesn't include a '/' consider PATH directories
+	if(strchr(command, '/') == NULL){
+		// Make copy of PATH as tokenizer is destructive
+		char tempPATH[strlen(PATH)+1];
+		strcpy(tempPATH, PATH);
+		char tryPath[MAXPATHLEN];  //  path buffer
+		char *possiblePath = strtok(tempPATH, ":");
+		//	Loop through possible paths from PATH
+		while(possiblePath != NULL){
+			sprintf(tryPath,"%s/%s", possiblePath, command);
+			//	Attempt launch, if accessable and can read
+			if(access(tryPath, F_OK|R_OK) == 0){
+				if(script){
+					//  Execute Script
+					exit(execute_script(tryPath));
+				}else{
+					//  Execute program
+					execv(tryPath, argv);
+				}
+			}
+			//	clear path buffer
+			memset(tryPath, 0, sizeof tryPath);
+			//  Assign next possible buffer
+			possiblePath = strtok(NULL,":");
+		}
+	}
+	else{
+		// command includes a '/'
+		if(access(command, R_OK|F_OK) == 0){
+			if(script) exit(execute_script(command));
+			else execv(command, argv);
+		}
+	}
+	if(script){
+		//  Exit with error if can't run executable or script
+		perror(command);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
  *  command_or_subshell
  *
  *  input: CMDTREE pointer
@@ -151,8 +205,10 @@ static void initialise_file_descriptors(CMDTREE *t){
 			break;
 		}
 		case N_COMMAND:{
-			//  Replace child with program or exit
-			execute_command(t->argv[0], t->argv);
+			//  Replace child with executable program
+			execute_command(t->argv[0], t->argv, false);
+			//  If executable not found, execute as script
+			execute_command(t->argv[0], t->argv, true);
 			break;
 		}
 		default:{
