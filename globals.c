@@ -2,9 +2,9 @@
 
 /*
 	CITS2002 Project 2 2015
-	Name(s):		Pradyumn Vij
-	Student number(s):	21469477
-	Date:		date-of-submission
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
 */
 
 
@@ -43,7 +43,6 @@ void print_cmdtree0(CMDTREE *t)
 		printf("<nullcmd> ");
 		return;
 	}
-
 	switch (t->type) {
 		case N_COMMAND :
 			for(int a=0 ; a < t->argc ; a++){

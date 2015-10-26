@@ -52,9 +52,9 @@ typedef	struct ct {
 /*
  *  Alterations: To available functions
  *  CITS2002 Project 2 2015
- *  Name(s):    Pradyumn Vij
- *  Student number(s):  21469477
- *  Date:   date-of-submission
+ *  Name:			Pradyumn Vij
+ *  Student number:	21469477
+ *  Date:   		26/10/2015
  */
 extern CMDTREE	*parse_cmdtree(FILE *);		//  in parser.c
 extern void	free_cmdtree(CMDTREE *);	//  in parser.c

@@ -1,27 +1,48 @@
 #include "mysh.h"
+#include <errno.h>
 
 /*
-   CITS2002 Project 2 2015
-   Name:             Pradyumn Vij
-   Student number:   21469477
-   Date:                date-of-submission
+	CITS2002 Project 2 2015
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
  */
 
 //  Local file global, protected
-static int exitstatus;
+static int exitStatus;
 
 /*
  *  getPriorExitStatus
  *  
  *  input: void
- *  return: integer representing the current
- *  value of static integer exitstatus.
- *  Simple getter function for exit status.
- *  Allows for exit from shell to be placed in 
- *  a function outside of main.
+ *  return: integer
+ *
+ *  Getter for static exit status.
+ *  
  */
 int getPriorExitStatus(){
-	return exitstatus;
+	return exitStatus;
+}
+
+/*
+ *  clean_background
+ *
+ *  input: void
+ *  return: void
+ *
+ *  Helper for main function, provides a wait function
+ *  to catch any zombie background functions which have
+ *  finished.
+ */
+void clean_background(void){
+	pid_t pid;
+	while(pid > 0){
+		//  WNOHANG returns immediately, pid of -1 grabs all processes
+		pid = waitpid(-1, NULL, WNOHANG);
+	}
+	if(pid < 0 && errno != ECHILD){
+		perror("waitpid backround");
+	}
 }
 
 /*
@@ -55,21 +76,21 @@ int main(int argc, char *argv[]){
 	//  DETERMINE IF THIS SHELL IS INTERACTIVE
 	interactive		= (isatty(fileno(stdin)) && isatty(fileno(stdout)));
 
-	exitstatus = EXIT_SUCCESS;
+	exitStatus = EXIT_SUCCESS;
 
 	//  READ AND EXECUTE COMMANDS FROM stdin UNTIL IT IS CLOSED (with control-D)
 	while(!feof(stdin)) {
 		CMDTREE	*t = parse_cmdtree(stdin);
 		if(t != NULL) {
-
-			exitstatus = execute_cmdtree(t);
-			printf("\nexit status = %d\n", exitstatus);
-				
+			exitStatus = execute_cmdtree(t);
 			free_cmdtree(t);
 		}
+		//  Cleanup any zombie processes
+		clean_background();
 	}
+
 	if(interactive){
 		fputc('\n', stdout);
 	}
-	return exitstatus;
+	return exitStatus;
 }

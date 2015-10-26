@@ -2,12 +2,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <signal.h>
 
 /*
 	CITS2002 Project 2 2015
-	Name(s):		Pradyumn Vij
-	Student number(s):	21469477
-	Date:		date-of-submission
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
 */
 
 // -------------------------------------------------------------------
@@ -37,10 +38,9 @@
  *  input: CMDTREEE pointer
  *  return: void 
  *  
- *  Helper function for launch_command and launch_background.
- *  Checks if command tree requires files to be read or written to, 
- *  if so initiates file descriptors and redirects to STDIN and
- *  STDOUT
+ *  Helper / Checker function for launchers, checks if file IO required.
+ *  If true, initiates file descriptors and redirects to STDIN
+ *  from file specified and / or redirects STDOUt to file.
  */
 static void initialise_file_descriptors(CMDTREE *t){
 	//  Integers used by open()
@@ -113,15 +113,15 @@ static int execute_script(char *scriptPath){
 	//  Loop through file stream
 	while(!feof(script)){
 		CMDTREE *s = parse_cmdtree(script);
-		scriptStatus = execute_cmdtree(s);
-		free_cmdtree(s);
-		printf("script exitstatus = %d\n", scriptStatus);
+		if(s != NULL){
+			scriptStatus = execute_cmdtree(s);
+			free_cmdtree(s);
+		}
 	}
 	//  Close file stream
 	if(script != NULL){
 		fclose(script);
 	}
-	printf("scriptstatus before return = %d\n", scriptStatus);
 	return scriptStatus;
 }
 
@@ -131,15 +131,15 @@ static int execute_script(char *scriptPath){
  *  
  *  input: 
  *  character array pointer
- *  array of character array pointer
+ *  array of character array pointers
  *  boolean value
+ *
  *  return: void
  *  
- *  Helper function for child scope launchers functions, 
- *  checks PATH if user enters a command not containing a '/'
- *  Handles errors.
- *  Boolean value determines whether to run script or executable
- *  behaviour.
+ *  Child scope launcher function. 
+ *  Checks PATH if user input does not contain a '/'
+ *  Boolean value switches between script or executable
+ *  True for script.  False for executable
  *  Script must exit child shell.
  */
 static void execute_command(char *command, char **argv, bool script){
@@ -154,14 +154,9 @@ static void execute_command(char *command, char **argv, bool script){
 		while(possiblePath != NULL){
 			sprintf(tryPath,"%s/%s", possiblePath, command);
 			//	Attempt launch, if accessable and can read
-			if(access(tryPath, F_OK|R_OK) == 0){
-				if(script){
-					//  Execute Script
-					exit(execute_script(tryPath));
-				}else{
-					//  Execute program
-					execv(tryPath, argv);
-				}
+			if(access(tryPath, F_OK) == 0){
+				if(script) exit(execute_script(tryPath));  //  Execute Script
+				else execv(tryPath, argv);  //  Execute program
 			}
 			//	clear path buffer
 			memset(tryPath, 0, sizeof tryPath);
@@ -171,7 +166,7 @@ static void execute_command(char *command, char **argv, bool script){
 	}
 	else{
 		// command includes a '/'
-		if(access(command, R_OK|F_OK) == 0){
+		if(access(command, F_OK) == 0){
 			if(script) exit(execute_script(command));
 			else execv(command, argv);
 		}
@@ -248,7 +243,7 @@ int launch_command(CMDTREE *t){
 	else{
 		//  Parent process scope 
 		//  Make parent wait for specific child to end
-		if(waitpid(programID, &childStatus, WUNTRACED) < 0){
+		if(waitpid(programID, &childStatus, 0) < 0){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
@@ -265,9 +260,9 @@ int launch_command(CMDTREE *t){
  *  launch_background
  *  
  *  input: CMDTREE pointer
- *  return: integer indicating whether fork successful or failed
+ *  return: integer
  *
- *  Variant of function "launch_command", however does not inlcude
+ *  Much like Launch ommand "launch_command", however does not inlcude
  *  the parent waiting, only a child being forked and replaced
  *  with a program, allowing it to run in the background as a child
  *  of shell.
@@ -285,7 +280,6 @@ int launch_background(CMDTREE *t){
 		//  Execute subshell or command
 		command_or_subshell(t);
 	}
-	//  Background process only fails on forking
 	return EXIT_SUCCESS;
 }
 

@@ -1,18 +1,19 @@
 #include "mysh.h"
+#include <errno.h>
 
 /*
 	CITS2002 Project 2 2015
-	Name(s):		Pradyumn Vij
-	Student number(s):	21469477
-	Date:		date-of-submission
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
 */
 
 /*
- *  
  *  execute_cmdtree
  *  
  *  input: CMDTREE pointer
- *  return: exit status of an entire CMDTREE parsed from STDIN
+ *  return: integer
+ *
  *  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
  *  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
  *  
