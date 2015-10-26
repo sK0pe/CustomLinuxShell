@@ -4,13 +4,13 @@
 
 /*
 	CITS2002 Project 2 2015
-	Name(s):		Pradyumn Vij
-	Student number(s):	21469477
-	Date:		date-of-submission
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
 */
 
 // -------------------------------------------------------------------
-//	Commands run by the mysh shell program, internal commands
+//	Commands run by the mysh shell program (internal commands)
 // -------------------------------------------------------------------
 
 
@@ -18,13 +18,13 @@
  *  mysh_exit
  *  
  *  input: CMDTREE pointer
+ *
  *  returns: void
- *  Tasked with exiting the prior exit status if called with
- *  no arguments.
- *  Or if called with arguments, exits with the numeric value
- *  of the first argument after the call to exit
+ *
+ *  Exits mysh with prior exitstatus if called with no argurments.
+ *  If called with arguments, exits with the numeric value
+ *  of only the first argument immediately after the call to exit
  */
-
 void mysh_exit(CMDTREE *t){
 	//  More than one argument:
 	if(t->argc > 1){
@@ -42,12 +42,14 @@ void mysh_exit(CMDTREE *t){
  * 	mysh_cd
  *  
  * 	input: pointer to array of character arrays
+ *
  * 	returns: integer
- * 	Attempts to change directory to the first
- * 	argument of input array.
- * 	Defaults to HOME directory.
- * 	If no '/' found, tries CDPATH
- *  Returns if chage directory successful.
+ *
+ * 	Attempts to change directory to the first element of
+ * 	input array.
+ * 	Defaults to HOME directory, if input is NULL.
+ * 	If no '/' found in the first element, searches CDPATH.
+ *  Return describes success or failure.
  */
 int mysh_cd(char **directory){
 	int exitstatus;

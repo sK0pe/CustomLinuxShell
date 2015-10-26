@@ -1,18 +1,19 @@
 #include "mysh.h"
+#include <errno.h>
 
 /*
 	CITS2002 Project 2 2015
-	Name(s):		Pradyumn Vij
-	Student number(s):	21469477
-	Date:		date-of-submission
+	Name:			Pradyumn Vij
+	Student number:	21469477
+	Date:			26/10/2015
 */
 
 /*
- *  
  *  execute_cmdtree
  *  
  *  input: CMDTREE pointer
- *  return: exit status of an entire CMDTREE parsed from STDIN
+ *  return: integer
+ *
  *  THIS FUNCTION SHOULD TRAVERSE THE COMMAND-TREE and EXECUTE THE COMMANDS
  *  THAT IT HOLDS, RETURNING THE APPROPRIATE EXIT-STATUS.
  *  
@@ -52,7 +53,7 @@ int execute_cmdtree(CMDTREE *t){
 				break;
 			}
 			//  Fork and execute external command(s)
-			exitstatus = launch_command(t);
+			exitstatus = launch_command(t, false);
 			break;
 		}
 		case N_SEMICOLON:{
@@ -84,17 +85,14 @@ int execute_cmdtree(CMDTREE *t){
 		}
 		case N_BACKGROUND:{
 			//  Launch left branch in background
-			exitstatus = launch_background(t->left);
+			exitstatus = launch_command(t->left, true);
 			//  Launch right branch
-			//  Do not wait for it, will continue to run till mysh
-			//  exits.  Then inherited by init.
 			execute_cmdtree(t->right);
 			break;
 		}
 		case N_SUBSHELL:{
 			//  Fork shell and execute remainining cmdtree in child shell;
-			//launch_subshell(t, &exitstatus);
-			exitstatus = launch_command(t);
+			exitstatus = launch_command(t, false);
 			break;
 		}
 		case N_PIPE:{

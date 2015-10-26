@@ -52,9 +52,9 @@ typedef	struct ct {
 /*
  *  Alterations: To available functions
  *  CITS2002 Project 2 2015
- *  Name(s):    Pradyumn Vij
- *  Student number(s):  21469477
- *  Date:   date-of-submission
+ *  Name:			Pradyumn Vij
+ *  Student number:	21469477
+ *  Date:   		26/10/2015
  */
 extern CMDTREE	*parse_cmdtree(FILE *);		//  in parser.c
 extern void	free_cmdtree(CMDTREE *);	//  in parser.c
@@ -64,8 +64,7 @@ extern int mysh_time(CMDTREE *);	//  in builtins.c
 extern void mysh_exit(CMDTREE *); //  in builtins.c
 extern int mysh_set(int, char **);  // in builtins.c
 extern int getPriorExitStatus();  //  in mysh.c
-extern int launch_command(CMDTREE *);  //  in launchers.c
-extern int launch_background(CMDTREE *);  //  in launchers.c
+extern int launch_command(CMDTREE *, bool);  //  in launchers.c
 extern int launch_pipe(CMDTREE *);  // in launchers.c
 
 /* The global variable HOME points to a directory name stored as a
