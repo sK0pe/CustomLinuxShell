@@ -35,12 +35,12 @@ int getPriorExitStatus(){
  *  finished.
  */
 void clean_background(void){
-	pid_t pid;
-	while(pid > 0){
+	pid_t zombieID;
+	while(zombieID > 0){
 		//  WNOHANG returns immediately, pid of -1 grabs all processes
-		pid = waitpid(-1, NULL, WNOHANG);
+		zombieID = waitpid(-1, NULL, WNOHANG);
 	}
-	if(pid < 0 && errno != ECHILD){
+	if(zombieID < 0 && errno != ECHILD){
 		perror("waitpid backround");
 	}
 }
@@ -55,7 +55,7 @@ void clean_background(void){
  */
 int main(int argc, char *argv[]){
 	//  REMEMBER THE PROGRAM'S NAME (TO REPORT ANY LATER ERROR MESSAGES)
-	argv0	= (argv0 = strrchr(argv[0],'/')) ? argv0+1 : argv[0];
+	argv0	= (argv0 = strrchr(argv[0], '/')) ? argv0+1 : argv[0];
 	argc--;				// skip 1st command-line argument
 	argv++;
 

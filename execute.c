@@ -53,7 +53,7 @@ int execute_cmdtree(CMDTREE *t){
 				break;
 			}
 			//  Fork and execute external command(s)
-			exitstatus = launch_command(t);
+			exitstatus = launch_command(t, false);
 			break;
 		}
 		case N_SEMICOLON:{
@@ -85,17 +85,14 @@ int execute_cmdtree(CMDTREE *t){
 		}
 		case N_BACKGROUND:{
 			//  Launch left branch in background
-			exitstatus = launch_background(t->left);
+			exitstatus = launch_command(t->left, true);
 			//  Launch right branch
-			//  Do not wait for it, will continue to run till mysh
-			//  exits.  Then inherited by init.
 			execute_cmdtree(t->right);
 			break;
 		}
 		case N_SUBSHELL:{
 			//  Fork shell and execute remainining cmdtree in child shell;
-			//launch_subshell(t, &exitstatus);
-			exitstatus = launch_command(t);
+			exitstatus = launch_command(t, false);
 			break;
 		}
 		case N_PIPE:{

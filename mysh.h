@@ -64,8 +64,7 @@ extern int mysh_time(CMDTREE *);	//  in builtins.c
 extern void mysh_exit(CMDTREE *); //  in builtins.c
 extern int mysh_set(int, char **);  // in builtins.c
 extern int getPriorExitStatus();  //  in mysh.c
-extern int launch_command(CMDTREE *);  //  in launchers.c
-extern int launch_background(CMDTREE *);  //  in launchers.c
+extern int launch_command(CMDTREE *, bool);  //  in launchers.c
 extern int launch_pipe(CMDTREE *);  // in launchers.c
 
 /* The global variable HOME points to a directory name stored as a

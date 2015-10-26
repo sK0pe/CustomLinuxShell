@@ -10,7 +10,7 @@
 */
 
 // -------------------------------------------------------------------
-//	Commands run by the mysh shell program, internal commands
+//	Commands run by the mysh shell program (internal commands)
 // -------------------------------------------------------------------
 
 
