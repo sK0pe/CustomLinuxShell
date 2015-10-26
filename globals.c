@@ -1,12 +1,10 @@
-#include "mysh.h"
-
 /*
 	CITS2002 Project 2 2015
 	Name:			Pradyumn Vij
 	Student number:	21469477
 	Date:			26/10/2015
 */
-
+#include "mysh.h"
 
 //  THREE INTERNAL VARIABLES (SEE mysh.h FOR EXPLANATION)
 char	*HOME, *PATH, *CDPATH;

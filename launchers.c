@@ -1,15 +1,12 @@
-#include "mysh.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
-#include <signal.h>
-
 /*
 	CITS2002 Project 2 2015
 	Name:			Pradyumn Vij
 	Student number:	21469477
 	Date:			26/10/2015
 */
+#include "mysh.h"
+#include <sys/fcntl.h>
+
 
 // -------------------------------------------------------------------
 //	Functions used by execute.c to execute programs in the CMDTREE

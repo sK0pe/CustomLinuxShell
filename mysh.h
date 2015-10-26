@@ -1,3 +1,10 @@
+/*
+ *  Alterations: To extern functions
+ *  CITS2002 Project 2 2015
+ *  Name:			Pradyumn Vij
+ *  Student number:	21469477
+ *  Date:   		26/10/2015
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,55 +14,48 @@
 #include <sys/param.h>
 
 #if defined(__linux__)
-    extern	char	*strdup(const char *str);
-    extern	int	fileno(const FILE *fp);
+    extern  char  *strdup(const char *str);
+    extern  int fileno(const FILE *fp);
 #endif
 
 //  Written by Chris.McDonald@uwa.edu.au, October 2015
 
 // ----------------------------------------------------------------------
 
-#define	DEFAULT_HOME	"/tmp"
-#define	DEFAULT_PATH	"/bin:/usr/bin:/usr/local/bin:."
-#define	DEFAULT_CDPATH	".:.."
+#define DEFAULT_HOME  "/tmp"
+#define DEFAULT_PATH  "/bin:/usr/bin:/usr/local/bin:."
+#define DEFAULT_CDPATH  ".:.."
 
-#define COMMENT_CHAR	'#'	// comment character
-#define HOME_CHAR	'~'	// home directory character
+#define COMMENT_CHAR  '#' // comment character
+#define HOME_CHAR '~' // home directory character
 
 //  ----------------------------------------------------------------------
 
 //  AN enum IN C99 'GENERATES' A SEQUENCE OF UNIQUE, ASCENDING CONSTANTS
 typedef enum {
-	N_AND = 0,		// as in   cmd1 && cmd2
-	N_BACKGROUND,		// as in   cmd1 &
-	N_OR,			// as in   cmd1 || cmd2	
-	N_SEMICOLON,		// as in   cmd1 ;  cmd2	
-	N_PIPE,			// as in   cmd1 |  cmd2	
-	N_SUBSHELL,		// as in   ( cmds )
-	N_COMMAND		// an actual md node itself
+  N_AND = 0,    // as in   cmd1 && cmd2
+  N_BACKGROUND,   // as in   cmd1 &
+  N_OR,     // as in   cmd1 || cmd2 
+  N_SEMICOLON,    // as in   cmd1 ;  cmd2 
+  N_PIPE,     // as in   cmd1 |  cmd2 
+  N_SUBSHELL,   // as in   ( cmds )
+  N_COMMAND   // an actual md node itself
 } NODETYPE;
 
 
-typedef	struct ct {
-    NODETYPE	type;		// the type of the node, &&, ||, etc
+typedef struct ct {
+    NODETYPE  type;   // the type of the node, &&, ||, etc
 
-    int		argc;		// the number of args iff type == N_COMMAND
-    char	**argv;		// the NULL terminated argument vector
+    int   argc;   // the number of args iff type == N_COMMAND
+    char  **argv;   // the NULL terminated argument vector
 
-    char	*infile;	// as in    cmd <  infile
-    char	*outfile;	// as in    cmd >  outfile
-    bool	append;		// true iff cmd >> outfile
+    char  *infile;  // as in    cmd <  infile
+    char  *outfile; // as in    cmd >  outfile
+    bool  append;   // true iff cmd >> outfile
 
-    struct ct	*left, *right;	// pointers to left and right subtrees
+    struct ct *left, *right;  // pointers to left and right subtrees
 } CMDTREE;
 
-/*
- *  Alterations: To available functions
- *  CITS2002 Project 2 2015
- *  Name:			Pradyumn Vij
- *  Student number:	21469477
- *  Date:   		26/10/2015
- */
 extern CMDTREE	*parse_cmdtree(FILE *);		//  in parser.c
 extern void	free_cmdtree(CMDTREE *);	//  in parser.c
 extern int	execute_cmdtree(CMDTREE *);	//  in execute.c
