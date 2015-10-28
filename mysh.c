@@ -5,7 +5,6 @@
 	Date:			26/10/2015
  */
 #include "mysh.h"
-#include <errno.h>
 
 
 //  Local file global, protected
@@ -35,7 +34,8 @@ int getPriorExitStatus(){
  *  finished.
  */
 void clean_background(void){
-	pid_t zombieID;
+	// Initiated to greater than 0 to start while loop
+    pid_t zombieID = 1;
 	while(zombieID > 0){
 		//  WNOHANG returns immediately, pid of -1 grabs all processes
 		zombieID = waitpid(-1, NULL, WNOHANG);

@@ -12,6 +12,11 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/fcntl.h>
+#include <sys/time.h>
+#include <dirent.h>
+#include <errno.h>
 
 #if defined(__linux__)
     extern  char  *strdup(const char *str);

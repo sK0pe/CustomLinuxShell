@@ -5,7 +5,6 @@
 	Date:			26/10/2015
 */
 #include "mysh.h"
-#include <sys/fcntl.h>
 
 
 // -------------------------------------------------------------------
@@ -228,8 +227,8 @@ static void execute_command(char *command, char **argv, bool script){
  *  Waits if not background, i returns Success.
  */
 int launch_command(CMDTREE *t, bool background){
-	int launchStatus;  // return status for the function
-	int childStatus;  // used by wait, to check on child process
+	int launchStatus = 0;  // return status for the function
+	int childStatus = 0;  // used by wait, to check on child process
 	// Fork program to try to make a child process
 	pid_t programID = fork();
 	if(programID < 0){	// parent checks if fork() failed
@@ -271,8 +270,8 @@ int launch_command(CMDTREE *t, bool background){
  *  Second child's STDIN is received from pipe output
  */
 int launch_pipe(CMDTREE *t){
-	int pipeResult;
-	//int shellStatus1, shellStatus2;
+	//  Result of pipe launch initated to non EXIT status
+    int pipeResult = -1;
 	int pipeStatus1, pipeStatus2;
 	pid_t program1, program2;
 	int pipeFD[2];  // required array for pipe

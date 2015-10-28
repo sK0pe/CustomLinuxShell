@@ -5,9 +5,6 @@
 	Date:			26/10/2015
 */
 #include "mysh.h"
-#include <sys/time.h>
-#include <dirent.h>
-
 
 // -------------------------------------------------------------------
 //	Commands run by the mysh shell program (internal commands)
