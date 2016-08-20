@@ -1,2 +1,3 @@
-# CITS2002-Project2
+# Custom Shell for UNIX based systems
 Custom UNIX shell using standard C library.
+TODO: fix up running scripts
